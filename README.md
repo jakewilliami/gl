@@ -5,5 +5,6 @@ A simple command line utility to wrap some common Git functions into a simple bi
 
 ## Quick Start
 ```bash
+$ ./compile.sh
 $ gl -h
 ```
