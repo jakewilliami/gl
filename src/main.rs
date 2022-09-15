@@ -103,7 +103,16 @@ fn main() {
 								.short("B")
 								.long("branches")
 								// .value_name("FILE")
-								.help("Prints all branches in the current repository")
+								.help("Prints all local branches in the current repository")
+								.takes_value(false)
+								.required(false)
+								.multiple(false)
+						   	)
+							.arg(Arg::with_name("REMOTES")
+								.short("R")
+								.long("remotes")
+								// .value_name("FILE")
+								.help("Prints remote branches of the current repository")
 								.takes_value(false)
 								.required(false)
 								.multiple(false)
@@ -205,14 +214,20 @@ fn main() {
 	
 	// show branches
 	if matches.is_present("BRANCHES") {
-		branch::get_branch_names();
+		branch::get_branch_names(branch::BranchListings::Local);
 	}
 	
+	// show the current repository
 	if matches.is_present("REPO") {
 		let current_repo = repo::current_repository();
 		if !current_repo.is_none() {
 			println!("{}", current_repo.unwrap());
 		}
+	}
+	
+	// show remote branches
+	if matches.is_present("REMOTES") {
+		branch::get_branch_names(branch::BranchListings::Remotes);
 	}
 	
 	// show commit count

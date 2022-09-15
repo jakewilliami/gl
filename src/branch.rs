@@ -1,7 +1,15 @@
 use std::process::{Command, Stdio};
 
-pub fn get_branch_names() {
-	let branch_names: Option<String> = branch_names();
+pub enum BranchListings {
+	Local,
+	Remotes,
+}
+
+pub fn get_branch_names(bt: BranchListings) {
+	let branch_names: Option<String> = match bt {
+		BranchListings::Local => branch_names(),
+		BranchListings::Remotes => remote_branches(),
+	};
 	if !branch_names.is_none() {
 		let mut stripped_branch_names = branch_names.unwrap();
 		if stripped_branch_names.ends_with('\n') {
@@ -44,6 +52,24 @@ fn branch_names() -> Option<String> {
 	let mut cmd = Command::new("git");
 	cmd.arg("branch");
 	cmd.arg("--color");
+	let output = cmd
+		.stdout(Stdio::piped())
+		.output()
+		.expect("Failed to execute `git branch`");
+	
+	if output.status.success() {
+		let branch_names = String::from_utf8_lossy(&output.stdout).into_owned();
+		return Some(branch_names);
+	} else {
+		return None
+	}
+}
+
+fn remote_branches() -> Option<String> {
+	let mut cmd = Command::new("git");
+	cmd.arg("branch");
+	cmd.arg("--color");
+	cmd.arg("--remotes");
 	let output = cmd
 		.stdout(Stdio::piped())
 		.output()
@@ -104,3 +130,4 @@ pub fn current_branch_name() -> Option<String> {
 	}
 }
 */
+
