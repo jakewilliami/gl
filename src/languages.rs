@@ -1,19 +1,7 @@
 use std::fs::read_to_string;
 use std::collections::HashMap;
-// use std::iter::Iterator;
-use json;
 use std::process::{Command, Stdio};
 use regex::Regex;
-// use std::char::ToUppercase;
-
-// fn get_languages() -> Result<()> {
-	// let parsed = json::parse("/Users/jakeireland/projects/scripts/bash/colours/textcolours.json");
-	// return parsed;
-// }
-
-// fn print_type_of<T>(_: &T) {
-//     println!("{}", std::any::type_name::<T>())
-// }
 
 static BASE_DIR: &str = "/Users/jakeireland/projects/";
 
@@ -56,24 +44,7 @@ pub fn parse_language_data() {
 fn parse_textcolours() -> json::JsonValue {
 	let parsed =
 		json::parse(&read_to_string(format!("{}/scripts/bash/colours/textcolours.json", BASE_DIR)).unwrap()).unwrap();
-	// let parsed = get_languages();
-	// let green_val = &parsed.unwrap()["BGREEN"].to_string();
-	// println!("{:?}", parsed);
-	
-	// print_type_of(&parsed);
-	// let mut map = HashMap::<Vec<String>, String>::new();
-    // for line in &parsed.unwrap() {
-	// 	// let s: Vec<&str> = i.split('\t').collect::<Vec<&str>>();
-	// 	// let j: Vec<String> = s[0]
-	// 	// let k = s[1];
-	// 	let j =
-    //     map.insert(j, k.to_owned());
-    // }
-	
-	// println!("{:?}", map);
-	
-	return parsed;
-	
+	parsed
 }
 
 fn construct_hashmap(text_colours: json::JsonValue) -> HashMap<String, String> {
@@ -86,7 +57,7 @@ fn construct_hashmap(text_colours: json::JsonValue) -> HashMap<String, String> {
 		map.insert(i, j);
 	}
 	
-	return map;
+	map
 }
 
 #[warn(dead_code)]
@@ -125,55 +96,25 @@ fn get_lang_modifier<'a>(ext: &'a str, map: &'a HashMap<String, String>) -> Opti
 		_ => "TEXT",
 	};
 	
-	// if ext == "jl" {
-	// 	// println!("{:?}", map.get("JULIA"));
-	// 	return map.get("JULIA");
-	// 	// print_type_of(&map.get("JULIA"));
-	// }
-	// // println!("{:?}", map.get("TEXT"));
-	// return map.get("JULIA");
-	
-	return map.get(m);
+	map.get(m)
 }
 
-// -> Result<std::process::Output, std::io::Error>
 fn get_languages() -> String {
-// pub fn get_languages() -> std::borrow::Cow<'static, str> {
 	let mut cmd = Command::new("github-linguist");
 	let output = cmd
 		.stdout(Stdio::piped())
 		.output()
 		.expect("Failed to execute `github-linguist`");
-		// .unwrap();
 		
-	// let status = cmd
-	// 	.status()
-	// 	.expect("Failed to execute `github-linguist`");
-	
 	if output.status.success() {
-		// println!("{:?}", status);
-		// status: ExitStatus(ExitStatus(0))
-			// .stdin(Stdio::null());
-		// print_type_of(&github_linguist)
-	
-		// need this because output is a vector of i32 for some reason
-		// use this line if you need valid utf8
-		// let github_linguist = String::from_utf8(output.stdout)
-		// 	.unwrap();
 		// I was having ownership issues with this
 		let github_linguist = String::from_utf8_lossy(&output.stdout)
 			.into_owned();
 	
-		// println!("{:?}", output);
-		// println!("{:?}", github_linguist);
-		// print_type_of(&github_linguist);
-		// let language_data =
-		return github_linguist;
+		github_linguist
 	
-		// return github_linguist;
 	} else {
 		println!("An error has occured.  It is likely that you aren't in the top-most level of a GitHub repository.  Or you need to install `github-linguist` via Ruby.");
-		// return String::from_utf8_lossy(b"");
-		return "".to_string();
+		"".to_string()
 	}
 }

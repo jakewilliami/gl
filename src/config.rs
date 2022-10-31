@@ -1,3 +1,4 @@
+// Git log
 // Update this list for your own identity!
 pub const ME_IDENTITY: [&str; 4] = [
 	"jakewilliami",
@@ -5,4 +6,7 @@ pub const ME_IDENTITY: [&str; 4] = [
 	"Jake W. Ireland",
 	"jakewilliami@icloud.com",
 ];
+
+// Global
+pub static BASE_DIR: &str = "/Users/jakeireland/projects/";
 

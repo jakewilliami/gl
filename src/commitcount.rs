@@ -12,9 +12,10 @@ use colored::*;
 pub fn get_commit_count(input: &str) {
 	// determine commit count
 	let commit_count_val: Option<String>;
-	if &input == &"today" {
+	
+	if input == "today" {
 		commit_count_val = commit_count_today();
-	} else if &input == &"yesterday" {
+	} else if input == "yesterday" {
 		commit_count_val = commit_count_yesterday();
 	} else {
 		let days_ago: isize = input.parse().unwrap_or(0);
@@ -29,22 +30,19 @@ pub fn get_commit_count(input: &str) {
 	// determine human-readable "since when" relative time
 	let when: String;
 	let mut past_tense: &str = "";
-	if &input == &"today" || &input == &"yesterday" {
+	
+	if input == "today" || input == "yesterday" {
 		when = input.to_string();
-		if &input == &"today" {
+		
+		if input == "today" {
 			past_tense = "have "
 		}
 	} else {
-		// let mut tmp_when = String::new();
-		// tmp_when.push_str("in the past ");
-		// tmp_when.push_str(&input);
-		// tmp_when.push_str("days");
-		// when = &tmp_when.clone();
 		when = format!("in the past {} days", &input);
 	};
 	
 	// print output if possible
-	if !commit_count_val.is_none() && !repo_name.is_none() && !branch_name.is_none(){
+	if commit_count_val.is_some() && repo_name.is_some() && branch_name.is_some(){
 		// format output nicely (and ensure it's lovely and green)
 		let out_message = format!(
 			"You {}made {} commits to {}/{} {}.",
@@ -54,6 +52,7 @@ pub fn get_commit_count(input: &str) {
 			branch_name.unwrap(),
 			when.as_str()
 		);
+		
 		println!("{}", out_message.green().bold());
 	}
 }
@@ -64,8 +63,7 @@ fn commit_count_today() -> Option<String> {
 	let now: i64 = Local::now().timestamp();
 	
 	// get the commit count for this period
-	let commit_count: Option<String> = commit_count(today_start, now);
-	return commit_count;
+	commit_count(today_start, now)
 }
 
 fn commit_count_yesterday() -> Option<String> {
@@ -79,8 +77,7 @@ fn commit_count_yesterday() -> Option<String> {
     // let timestamp_of_interest: i64 = (today - Duration::days(date_of_interest)).timestamp();
 	
 	// get the commit count for this period
-	let commit_count: Option<String> = commit_count(yersterday_timestamp, today_timestamp);
-	return commit_count;
+	commit_count(yersterday_timestamp, today_timestamp)
 }
 
 fn commit_count_since(n: isize) -> Option<String> {
@@ -92,8 +89,7 @@ fn commit_count_since(n: isize) -> Option<String> {
 	let since_timestamp: i64 = since_start.timestamp();
 	
 	// get the commit count for this period
-	let commit_count: Option<String> = commit_count(since_timestamp, now);
-	return commit_count;
+	commit_count(since_timestamp, now)
 }
 
 fn commit_count(since_timestamp: i64, before_timestamp: i64) -> Option<String> {
@@ -123,14 +119,15 @@ fn commit_count(since_timestamp: i64, before_timestamp: i64) -> Option<String> {
 	// return appropriately (error silently)
 	if output.status.success() {
 		let mut commit_count = String::from_utf8_lossy(&output.stdout).into_owned();
+		
 		if commit_count.ends_with('\n') {
 			commit_count.pop();
 			if commit_count.ends_with('\r') {
             	commit_count.pop();
         	}
 		}
-		return Some(commit_count);
+		Some(commit_count)
 	} else {
-		return None;
+		None
 	}
 }
