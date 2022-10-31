@@ -2,6 +2,10 @@ use std::process::{Command, Stdio};
 use colored::*;
 use regex::Regex;
 
+// https://stackoverflow.com/a/49476448/12069968 (comment #2)
+#[path = "config.rs"]
+mod config;
+
 pub fn get_git_log(n: usize) {
 	let log: String = git_log(n);
 	let colourised: Vec<String> = colourise_git_log(log);
@@ -31,7 +35,7 @@ fn colourise_git_log(log: String) -> Vec<String> {
 		// let re2 = Regex::new(r"<(?P<author>[^>]*)>").unwrap();
 		// let new_auth = re2.replace(&cleaned_l, "<$author>".red());
 		// TODO: do I need to use more regex here?  Can I not replace the regex to just match with the author's name (which we already obtained)?
-		if auth == "jakewilliami" || auth == "Jake Ireland" || auth == "Jake W. Ireland" {
+		if config::ME_IDENTITY.contains(&auth.as_str()) {
 			// let re = Regex::new(r"<([^>]*)>").unwrap();
 			let colourised_l = &re.replace(&cleaned_l, |caps: &regex::Captures| {
 	    		format!("{}{}{}{}",
