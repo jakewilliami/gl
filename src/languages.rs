@@ -1,120 +1,60 @@
-use std::fs::read_to_string;
+use std::convert::TryFrom;
 use std::collections::HashMap;
-use std::process::{Command, Stdio};
-use regex::Regex;
+use std::path::PathBuf;
 
-static BASE_DIR: &str = "/Users/jakeireland/projects/";
+extern crate hyperpolyglot;
+use hyperpolyglot::{get_language_breakdown, Detection, Language};
 
-pub fn parse_language_data() {
-	let text_colours: json::JsonValue = parse_textcolours();
-	let map: HashMap<String, String> = construct_hashmap(text_colours);
-	let lang_data = get_languages();
-	let languages = lang_data
-		.split('\n')
-		.filter(|s| !s.is_empty())
-		.collect::<Vec<&str>>();
+use colored::*;
+use colorsys::Rgb;
+
+#[path = "repo.rs"]
+mod repo;
+
+pub fn construct_language_summary() -> Vec<(Option<Language>, f64)> {
+	let top_level_path = repo::top_level_repo_path();
 	
-	for lang in languages {
-		// lang.is_empty() && continue;
-		let re = Regex::new("%[ ]+").unwrap();
-		let mat: Vec<&str> = re.split(lang)
-			.collect();
-		let prop = format!("{}{}", mat[0], "%");
-		let lang_name = mat[1];
-		// This is where we transform the language obtained by git-linguist
-		// To better match the languages in the language hashmap (i.e., the json file)
-		let lang_name_transformed = lang_name
-			.to_uppercase()
-			.replace(&[' ', '-'][..], "")
-			.replace('+', "P")
-			.replace('#', "SHARP");
-		let modifier = match map.get(&lang_name_transformed) {
-			Some(x) => x,
-			None => map.get("TEXT").unwrap(),
-		};
-		// println!("{:?}", lang_name);
-		println!("{0: <0}{1: <8}{2: <0}\u{001b}[0;38m", modifier, prop, lang_name);
-	}
+	if let Some(top_level_path) = top_level_path {
+		let language_breakdown: HashMap<&'static str, Vec<(Detection, PathBuf)>> = get_language_breakdown(top_level_path);
 		
-	// println!("{:?}", languages);
-}
-
-
-// Result<json::value::JsonValue, json::error::Error>
-fn parse_textcolours() -> json::JsonValue {
-	let parsed =
-		json::parse(&read_to_string(format!("{}/scripts/bash/colours/textcolours.json", BASE_DIR)).unwrap()).unwrap();
-	parsed
-}
-
-fn construct_hashmap(text_colours: json::JsonValue) -> HashMap<String, String> {
-	let mut map = HashMap::<String, String>::new();
-	// println!("{:#?}", text_colours.entries());
-	for line in text_colours.entries() {
-		// println!("{:?}", line);
-		let i: String = line.0.to_string();
-		let j: String = line.1.to_string();
-		map.insert(i, j);
-	}
-	
-	map
-}
-
-#[warn(dead_code)]
-fn get_lang_modifier<'a>(ext: &'a str, map: &'a HashMap<String, String>) -> Option<&'a String> {
-	let m = match ext {
-		"jl" => "JULIA",
-		"rs" => "RUST",
-		"c" | "h" | "h1" | "h2" | "1" | "3" | "8" | "in" => "C",
-		"" | "sh" | "ahk" | "script" | "scpt" => "SHELL",
-		"tex" | "sty" | "cls" => "TEX",
-		"json" | "js" => "JAVASCRIPT",
-		"pl" => "PERL",
-		"py" | "pyc" | "pytxcode" => "PYTHON",
-		"go" => "GO",
-		"java" | "jar" => "JAVA",
-		"rb" => "RUBY",
-		"lua" => "LUA",
-		"cpp" | "cc" | "dox" | "cmake" | "template" | "dtd" => "CPP",
-		"lisp" => "LISP",
-		"clisp" => "COMMONLISP",
-		"elisp" => "EMACSLISP",
-		"r" | "rscript" => "R",
-		"ex" => "ELIXIR",
-		"md" | "sgml" => "MARKDOWN",
-		"sed" => "SED",
-		"awk" => "AWK",
-		"htm" | "html" | "h5" => "HTML",
-		"ipynb" => "JUPYTERNOTEBOOK",
-		"m" => "MATLAB",
-		"css" => "CSS",
-		"hs" => "HASKELL",
-		"bat" => "BATCHFILE",
-		"plist" | "xml" => "MARKDOWN",
-		"applescript" => "APPLESCRIPT",
-		"toml" | "efi" => "MARKDOWN",
-		_ => "TEXT",
-	};
-	
-	map.get(m)
-}
-
-fn get_languages() -> String {
-	let mut cmd = Command::new("github-linguist");
-	let output = cmd
-		.stdout(Stdio::piped())
-		.output()
-		.expect("Failed to execute `github-linguist`");
+		// https://github.com/monkslc/hyperpolyglot/blob/40f091679b94057ec925f7f8925e2960d1d9dbf2/src/bin/main.rs#L121-L133
+		let total_file_count = language_breakdown.iter()
+										.fold(0, |acc, (_, files)| acc + files.len()) as f64;
+		let mut lang_summary: Vec<(Option<Language>, f64)> = Vec::new();
+		for (language, files) in language_breakdown {
+			let percentage = ((files.len() * 100) as f64) / total_file_count;
+			let language_struct: Option<Language> = match Language::try_from(language) {
+				Ok(lang) => Some(lang),
+				Err(_) => None,
+			};
+			lang_summary.push((language_struct, percentage))
+		}
 		
-	if output.status.success() {
-		// I was having ownership issues with this
-		let github_linguist = String::from_utf8_lossy(&output.stdout)
-			.into_owned();
+		// Sort by percentage (assuming our percentages are never NaN
+		lang_summary.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
 	
-		github_linguist
-	
+		lang_summary
 	} else {
-		println!("An error has occured.  It is likely that you aren't in the top-most level of a GitHub repository.  Or you need to install `github-linguist` via Ruby.");
-		"".to_string()
+		vec![]
 	}
 }
+
+pub fn print_language_summary(top_n: usize, language_summary: Vec<(Option<Language>, f64)>) {
+	for (language, percentage) in language_summary[0..top_n].iter() {
+		if let Some(language) = language {
+			if let Some(lang_colour) = language.color {
+				let rgb = Rgb::from_hex_str(lang_colour).unwrap();
+				let r = rgb.red().round() as u8;
+				let g = rgb.green().round() as u8;
+				let b = rgb.blue().round() as u8;
+				let language_summary_str = format!("{:>6.2}% {}", percentage, language.name).truecolor(r, g, b);
+				println!("{}", language_summary_str);
+			} else {
+				println!("{:>6.2}% {}", percentage, language.name);
+			}
+		} else {
+			println!("{:>6.2}% UNKNOWN LANGUAGE", percentage);
+		}
+	}
+}
+

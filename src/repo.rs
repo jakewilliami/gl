@@ -1,7 +1,7 @@
 use std::process::{Command, Stdio};
 use std::path::{Path, PathBuf};
 
-pub fn current_repository() -> Option<String> {
+pub fn top_level_repo_path() -> Option<String> {
 	let mut cmd = Command::new("git");
 	cmd.arg("rev-parse");
 	cmd.arg("--show-toplevel");
@@ -20,7 +20,16 @@ pub fn current_repository() -> Option<String> {
             	current_repo_path.pop();
         	}
 		}
-		
+		Some(current_repo_path)
+	} else {
+		None
+	}
+}
+
+pub fn current_repository() -> Option<String> {
+	let current_repo_path = top_level_repo_path();
+	
+	if let Some(current_repo_path) = current_repo_path {
 		// get the basename of the path
 		let repo_path = Path::new(&current_repo_path);
 		let repo_path_basename = PathBuf::from(

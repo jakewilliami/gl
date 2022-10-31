@@ -12,9 +12,8 @@ use clap::{Arg, App, value_t};
 extern crate colored;
 extern crate regex;
 
-// needed for commitcount
+// needed for commitcount.rs
 extern crate chrono;
-// use chrono::prelude::*;
 
 // TODO list (delete help commands as I go)
 // -i | --issues		Prints currently open issues in present repository.
@@ -43,8 +42,9 @@ fn main() {
 							.arg(Arg::with_name("LANGUAGES")
 								.short("l")
 								.long("languages")
-								.help("Prints language breakdown in present repository.")
-								.takes_value(false)
+								.help("Prints language breakdown in present repository.  Will print only top n languages if given value (optional).")
+								.takes_value(true)
+						        .min_values(0)
 								.required(false)
 								.multiple(false)
 						   	)
@@ -140,7 +140,11 @@ fn main() {
 	// show languages
 	if matches.is_present("LANGUAGES") {
 		// This parses _and_ prints the language output
-		languages::parse_language_data();
+		// languages::parse_language_data();
+		let language_summary = languages::construct_language_summary();
+		let top_n = value_t!(matches, "LANGUAGES", usize)
+			.unwrap_or(language_summary.len());
+		languages::print_language_summary(top_n, language_summary);
 	};
 	
 	// show status of git repo
