@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 clap = "2.33.3"
 json = "0.12.4"
-regex = "1.4.3"
+regex = "1.5.4"
 colored = "2.0.0"
 chrono = "0.4.19"
+hyperpolyglot = "0.1.7"
