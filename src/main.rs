@@ -24,7 +24,7 @@ extern crate chrono;
 
 fn main() {
 	let matches = App::new("gl")
-                            .version("2.0")
+                            .version("0.2.1")
                             .author("Jake W. Ireland. <jakewilliami@icloud.com>")
                             .about("Git log and other personalised git utilities.  By default (i.e., without any arguments), it will print the last 10 commits nicely.")
 							.arg(Arg::with_name("LOGNUMBER")
