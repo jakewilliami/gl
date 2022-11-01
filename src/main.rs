@@ -1,9 +1,10 @@
-mod languages;
-mod status;
-mod log;
 mod branch;
-mod repo;
 mod commitcount;
+mod contributions;
+mod languages;
+mod log;
+mod repo;
+mod status;
 
 extern crate clap;
 use clap::{Arg, App, value_t};
@@ -120,6 +121,14 @@ fn main() {
 								// .multiple(true)
 								.conflicts_with("COMMITCOUNT")
 						   	)
+							.arg(Arg::with_name("CONTRIBUTIONS")
+								.short("co")
+								.long("contrib")
+								.help("Prints some contribution statistics of the present repository")
+								.takes_value(false)
+								.required(false)
+								.multiple(false)
+						   	)
 							.get_matches();
 
 	
@@ -200,5 +209,10 @@ fn main() {
 		
 		let input = input_raw.unwrap();
 		commitcount::get_commit_count(input);
+	}
+	
+	if matches.is_present("CONTRIBUTIONS") {
+		let c = contributions::git_contributions("Jake Ireland".to_string());
+		println!("{:?}", c);
 	}
 }
