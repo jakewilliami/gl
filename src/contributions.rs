@@ -1,4 +1,5 @@
 use std::process::{Command, Stdio};
+use std::collections::HashMap;
 
 #[derive(Debug)]
 pub struct GitContributor {
@@ -44,13 +45,13 @@ impl ContributorStats for GitContributor {
 	}
 }
 
-pub fn git_contributions(author: String) -> GitContributor {
-	// git log --no-merges --author="Jake Ireland" --pretty=tformat: --numstat
+pub fn git_contributions_per_author(author: String) -> GitContributor {
+	// git log --no-merges --author="SOME AUTHOR" --pretty=tformat: --numstat
     let mut cmd = Command::new("git");
 	cmd.arg("log");
 	cmd.arg("--no-merges");
-	cmd.arg("--author=\"Jake Ireland\"");
-	cmd.arg("--pretty=tformat: ");  // todo: this is returning blank!
+	cmd.arg(format!("--author=\"{}\"", author));
+	cmd.arg("--pretty=tformat:");  // TODO: this is broken!
 	cmd.arg("--numstat");
 	println!("{:?}", cmd);
 	
@@ -90,6 +91,33 @@ pub fn git_contributions(author: String) -> GitContributor {
 			author,
 			file_contributions: vec![],
 		}
+	}
+}
+
+
+pub fn git_commit_count() -> String {
+	// git shortlog -sn --all --no-merges
+    let mut cmd = Command::new("git");
+	cmd.arg("shortlog");
+	cmd.arg("--summary");
+	cmd.arg("--numbered");
+	cmd.arg("--no-merges");
+	cmd.arg("--all");
+
+	let output = cmd
+		.stdout(Stdio::piped())
+		.output()
+		.expect("Failed to execute `git log`");
+	
+	if output.status.success() {
+		let git_shortlog = String::from_utf8_lossy(&output.stdout)
+			.into_owned();
+		
+		git_shortlog
+	} else {
+		println!("An error has occured.  It is likely that you aren't in a git repository, or you may not have `git` installed.");
+		
+		"".to_string()
 	}
 }
 

@@ -121,11 +121,19 @@ fn main() {
 								// .multiple(true)
 								.conflicts_with("COMMITCOUNT")
 						   	)
-							.arg(Arg::with_name("CONTRIBUTIONS")
-								.short("co")
-								.long("contrib")
-								.help("Prints some contribution statistics of the present repository")
+							.arg(Arg::with_name("AUTHORCOMMITCOUNTS")
+								.short("A")
+								.long("author-commit-counts")
+								.help("Prints the number of commits per author")
 								.takes_value(false)
+								.required(false)
+								.multiple(false)
+						   	)
+							.arg(Arg::with_name("AUTHORCONTRIBSTATS")
+								.short("S")
+								.long("author-contrib-stats")
+								.help("Prints some contribution statistics given an author")
+								.takes_value(true)
 								.required(false)
 								.multiple(false)
 						   	)
@@ -210,9 +218,14 @@ fn main() {
 		let input = input_raw.unwrap();
 		commitcount::get_commit_count(input);
 	}
+
+	if matches.is_present("AUTHORCOMMITCOUNTS") {
+		print!("{}", contributions::git_commit_count());
+	}
 	
-	if matches.is_present("CONTRIBUTIONS") {
-		let c = contributions::git_contributions("Jake Ireland".to_string());
+	if matches.is_present("AUTHORCONTRIBSTATS") {
+		let author = matches.value_of("AUTHORCONTRIBSTATS").unwrap().to_string();
+		let c = contributions::git_contributions_per_author(author);
 		println!("{:?}", c);
 	}
 }
