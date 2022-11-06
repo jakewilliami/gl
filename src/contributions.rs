@@ -116,8 +116,9 @@ fn git_contributions_per_author(identity: GitIdentity, freq: usize) -> GitContri
 		    .into_iter()
 		    .map(|s| {
 			    let mut parts = s.split_whitespace();
-				let lines_added: usize = parts.next().unwrap().parse::<usize>().unwrap();
-				let lines_deleted: usize = parts.next().unwrap().parse::<usize>().unwrap();
+
+				let lines_added: usize = parts.next().unwrap().parse::<usize>().unwrap_or(0);
+				let lines_deleted: usize = parts.next().unwrap().parse::<usize>().unwrap_or(0);
 
 				GitFileContribution{
 					lines_added,
