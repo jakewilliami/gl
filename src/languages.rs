@@ -13,10 +13,10 @@ mod repo;
 
 pub fn construct_language_summary() -> Vec<(Option<Language>, f64)> {
 	let top_level_path = repo::top_level_repo_path();
-	
+
 	if let Some(top_level_path) = top_level_path {
 		let language_breakdown: HashMap<&'static str, Vec<(Detection, PathBuf)>> = get_language_breakdown(top_level_path);
-		
+
 		// https://github.com/monkslc/hyperpolyglot/blob/40f091679b94057ec925f7f8925e2960d1d9dbf2/src/bin/main.rs#L121-L133
 		let total_file_count = language_breakdown.iter()
 										.fold(0, |acc, (_, files)| acc + files.len()) as f64;
@@ -29,10 +29,10 @@ pub fn construct_language_summary() -> Vec<(Option<Language>, f64)> {
 			};
 			lang_summary.push((language_struct, percentage))
 		}
-		
+
 		// Sort by percentage (assuming our percentages are never NaN
 		lang_summary.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-	
+
 		lang_summary
 	} else {
 		vec![]
@@ -47,14 +47,13 @@ pub fn print_language_summary(top_n: usize, language_summary: Vec<(Option<Langua
 				let r = rgb.red().round() as u8;
 				let g = rgb.green().round() as u8;
 				let b = rgb.blue().round() as u8;
-				let language_summary_str = format!("{:>6.2}% {}", percentage, language.name).truecolor(r, g, b);
+				let language_summary_str = format!("{:>6.2}%  {}", percentage, language.name).truecolor(r, g, b);
 				println!("{}", language_summary_str);
 			} else {
-				println!("{:>6.2}% {}", percentage, language.name);
+				println!("{:>6.2}%  {}", percentage, language.name);
 			}
 		} else {
-			println!("{:>6.2}% UNKNOWN LANGUAGE", percentage);
+			println!("{:>6.2}%  UNKNOWN LANGUAGE", percentage);
 		}
 	}
 }
-
