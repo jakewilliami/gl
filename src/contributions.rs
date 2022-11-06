@@ -6,27 +6,23 @@ use tabular::{Table, row};
 
 // Types
 
-#[derive(Debug)]
 pub struct GitContributor {
 	id: GitIdentity,
 	commits: usize,
 	file_contributions: Vec<GitFileContribution>,
 }
 
-#[derive(Debug)]
 struct GitIdentity {
 	email: String,
 	author_names: Vec<String>,
 }
 
-#[derive(Debug)]
 struct GitFileContribution {
 	lines_added: usize,
 	lines_deleted: usize,
 	lines_written: isize,
 }
 
-#[derive(Debug)]
 struct ContributionSummary {
 	lines_added: usize,
 	lines_deleted: usize,
@@ -62,11 +58,20 @@ impl ContributorStats for GitContributor {
 // Display methods
 
 pub fn display_git_contributions_per_author(contributors: Vec<GitContributor>) {
+	let mut contributors_with_summary: Vec<(GitContributor, ContributionSummary)> = Vec::new();
+	for contributor in contributors {
+		let contrib_summary = contributor.contribution_summary();
+		contributors_with_summary.push((contributor, contrib_summary));
+	}
+	// Sort by sum of lines added and deleted (in reverse order)
+	contributors_with_summary.sort_by(|a, b| {
+		(b.1.lines_added + b.1.lines_deleted).cmp(&(a.1.lines_added + a.1.lines_deleted))
+	});
+
 	let mut table = Table::new("{:<}  {:>}  {:>}  {:>}")
 		.with_row(row!("Author", "Lines added", "Lines deleted", "Lines of code"));
 
-	for contributor in contributors {
-		let contrib_summary = contributor.contribution_summary();
+	for (contributor, contrib_summary) in contributors_with_summary {
 		table.add_row(row!(
 			contributor.id.email,
 			contrib_summary.lines_added,
@@ -78,10 +83,14 @@ pub fn display_git_contributions_per_author(contributors: Vec<GitContributor>) {
 }
 
 pub fn display_git_author_frequency(contributors: Vec<GitContributor>) {
+	let mut contributors_sorted = contributors;
+	// Sort by commits (in reverse order)
+	contributors_sorted.sort_by(|a, b| b.commits.cmp(&a.commits));
+
 	let mut table = Table::new("{:<}  {:>}")
 		.with_row(row!("Author", "Commits"));
 
-	for contributor in contributors {
+	for contributor in contributors_sorted {
 		table.add_row(row!(contributor.id.email, contributor.commits));
 	}
 
