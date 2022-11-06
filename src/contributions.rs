@@ -2,6 +2,7 @@ use std::collections::HashMap;
 use std::process::{Command, Stdio};
 
 use regex::Regex;
+use tabular::{Table, row};
 
 // Types
 
@@ -61,23 +62,30 @@ impl ContributorStats for GitContributor {
 // Display methods
 
 pub fn display_git_contributions_per_author(contributors: Vec<GitContributor>) {
-	println!("TODO: improve output");
+	let mut table = Table::new("{:<}  {:>}  {:>}  {:>}")
+		.with_row(row!("Author", "Lines added", "Lines deleted", "Lines of code"));
+
 	for contributor in contributors {
 		let contrib_summary = contributor.contribution_summary();
-		println!("{} {} {} {}",
-				 contributor.id.email,
-				 contrib_summary.lines_added,
-				 contrib_summary.lines_deleted,
-				 contrib_summary.lines_written
-		);
+		table.add_row(row!(
+			contributor.id.email,
+			contrib_summary.lines_added,
+			contrib_summary.lines_deleted,
+			contrib_summary.lines_written,
+		));
 	}
+	println!("{}", table);
 }
 
 pub fn display_git_author_frequency(contributors: Vec<GitContributor>) {
-	println!("TODO: improve output");
+	let mut table = Table::new("{:<}  {:>}")
+		.with_row(row!("Author", "Commits"));
+
 	for contributor in contributors {
-		println!("{} {}", contributor.commits, contributor.id.email);
+		table.add_row(row!(contributor.id.email, contributor.commits));
 	}
+
+	println!("{}", table);
 }
 
 // Constructor methods
