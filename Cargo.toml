@@ -1,6 +1,6 @@
 [package]
 name = "gl"
-version = "2.1.1"
+version = "2.2.0"
 authors = ["Jake W. Ireland <jakewilliami@icloud.com>"]
 edition = "2018"
 
@@ -14,3 +14,4 @@ colored = "2.0.0"
 chrono = "0.4.19"
 hyperpolyglot = "0.1.7"
 colorsys = "0.6.6"
+tabular = "0.2.0"

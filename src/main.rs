@@ -1,9 +1,10 @@
-mod languages;
-mod status;
-mod log;
 mod branch;
-mod repo;
 mod commitcount;
+mod contributions;
+mod languages;
+mod log;
+mod repo;
+mod status;
 
 extern crate clap;
 use clap::{Arg, App, value_t, crate_version};
@@ -110,19 +111,35 @@ fn main() {
 								.long("commit-count-when")
 								.help("Counts the number of commits for a specified day.  Takes values \"today\" (see -c), \"yesterday\", or some number of days ago.")
 								// TODO:
-								//   If you give it 2 numbers, it will show the number of commits since the first number but before the second number (days ago).  
-                                //   E.g., given 5, 2, it will get the number of commits since 5 days ago, but before 2 days ago.  Given 5 and 1, it will get the 
-								//   number of commits in the last 5 days ago, no including anything since yesterday.  This can be done by calculating commits_since(5) 
-								//   - commits_since(2), etc.  To do this I need to figure out how to use multiple arguments, otherwise I will have to create a separate 
+								//   If you give it 2 numbers, it will show the number of commits since the first number but before the second number (days ago).
+                                //   E.g., given 5, 2, it will get the number of commits since 5 days ago, but before 2 days ago.  Given 5 and 1, it will get the
+								//   number of commits in the last 5 days ago, no including anything since yesterday.  This can be done by calculating commits_since(5)
+								//   - commits_since(2), etc.  To do this I need to figure out how to use multiple arguments, otherwise I will have to create a separate
                                 //   flag
 								.takes_value(true)
 								.required(false)
 								// .multiple(true)
 								.conflicts_with("COMMITCOUNT")
 						   	)
+							.arg(Arg::with_name("AUTHORCOMMITCOUNTS")
+								.short("A")
+								.long("author-commit-counts")
+								.help("Prints the number of commits per author")
+								.takes_value(false)
+								.required(false)
+								.multiple(false)
+						   	)
+							.arg(Arg::with_name("AUTHORCONTRIBSTATS")
+								.short("S")
+								.long("author-contrib-stats")
+								.help("Prints some contribution statistics given an author")
+								.takes_value(false)
+								.required(false)
+								.multiple(false)
+						   	)
 							.get_matches();
 
-	
+
 	// show the git log
 	if matches.args.is_empty() {
 		let n: usize = 10;
@@ -136,7 +153,7 @@ fn main() {
 			log::get_git_log(n);
 		}
 	}
-	
+
 	// show languages
 	if matches.is_present("LANGUAGES") {
 		// This parses _and_ prints the language output
@@ -146,7 +163,7 @@ fn main() {
 			.unwrap_or(language_summary.len());
 		languages::print_language_summary(top_n, language_summary);
 	};
-	
+
 	// show status of git repo
 	if matches.is_present("STATUS") {
 		let dir = value_t!(matches, "STATUS", String)
@@ -158,12 +175,12 @@ fn main() {
 		};
 		status::get_git_status(&maybe_dir);
 	};
-	
+
 	// show statuses of predefined git repos
 	if matches.is_present("GLOBAL") {
 		status::global_status();
 	};
-	
+
 	// show branch name
 	if matches.is_present("BRANCH") {
 		let current_branch = branch::current_branch();
@@ -171,12 +188,12 @@ fn main() {
 			println!("{}", current_branch.unwrap());
 		}
 	}
-	
+
 	// show branches
 	if matches.is_present("BRANCHES") {
 		branch::get_branch_names(branch::BranchListings::Local);
 	}
-	
+
 	// show the current repository
 	if matches.is_present("REPO") {
 		let current_repo = repo::current_repository();
@@ -184,21 +201,31 @@ fn main() {
 			println!("{}", current_repo.unwrap());
 		}
 	}
-	
+
 	// show remote branches
 	if matches.is_present("REMOTES") {
 		branch::get_branch_names(branch::BranchListings::Remotes);
 	}
-	
+
 	// show commit count
 	if matches.is_present("COMMITCOUNT") {
 		commitcount::get_commit_count("today");
 	}
-	
+
 	if matches.is_present("COMMITCOUNTWHEN") {
 		let input_raw = matches.value_of("COMMITCOUNTWHEN");
-		
+
 		let input = input_raw.unwrap();
 		commitcount::get_commit_count(input);
+	}
+
+	if matches.is_present("AUTHORCOMMITCOUNTS") {
+		let contributors = contributions::git_contributor_stats();
+		contributions::display_git_author_frequency(contributors);
+	}
+
+	if matches.is_present("AUTHORCONTRIBSTATS") {
+		let contributors = contributions::git_contributor_stats();
+		contributions::display_git_contributions_per_author(contributors);
 	}
 }
