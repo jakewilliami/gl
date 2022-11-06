@@ -96,20 +96,17 @@ pub fn git_contributor_stats() -> Vec<GitContributor> {
 
 fn git_contributions_per_author(identity: GitIdentity, freq: usize) -> GitContributor {
 	// git log --no-merges --author="SOME AUTHOR OR EMAIL" --pretty=tformat: --numstat
-	    let mut cmd = Command::new("git");
+    let mut cmd = Command::new("git");
 	cmd.arg("log");
 	cmd.arg("--no-merges");
-	cmd.arg(format!("--author=\"{}\"", identity.email));
-	cmd.arg("--pretty=tformat:");  // TODO: this is broken!
+	cmd.arg(format!("--author={}", identity.email));
+	cmd.arg("--pretty=tformat:");
 	cmd.arg("--numstat");
-	println!("{:?}", cmd);
-	println!("TODOOO: Fix git log contributions command")
 
 	let output = cmd
 		.stdout(Stdio::piped())
 		.output()
 		.expect("Failed to execute `git log`");
-	println!("{:?}", output);
 
 	if output.status.success() {
 		let git_log = String::from_utf8_lossy(&output.stdout)
