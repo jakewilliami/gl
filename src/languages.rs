@@ -40,7 +40,7 @@ pub fn construct_language_summary() -> Vec<(Option<Language>, f64)> {
 }
 
 pub fn print_language_summary(top_n: usize, language_summary: Vec<(Option<Language>, f64)>) {
-	for (language, percentage) in language_summary[0..top_n].iter() {
+	for (language, percentage) in language_summary.iter().take(top_n) {
 		if let Some(language) = language {
 			if let Some(lang_colour) = language.color {
 				let rgb = Rgb::from_hex_str(lang_colour).unwrap();

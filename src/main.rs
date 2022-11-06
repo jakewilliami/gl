@@ -7,7 +7,7 @@ mod repo;
 mod status;
 
 extern crate clap;
-use clap::{Arg, App, value_t};
+use clap::{Arg, App, value_t, crate_version};
 
 // needed for log.rs
 extern crate colored;
@@ -25,7 +25,7 @@ extern crate chrono;
 
 fn main() {
 	let matches = App::new("gl")
-                            .version("0.2.1")
+                            .version(crate_version!())
                             .author("Jake W. Ireland. <jakewilliami@icloud.com>")
                             .about("Git log and other personalised git utilities.  By default (i.e., without any arguments), it will print the last 10 commits nicely.")
 							.arg(Arg::with_name("LOGNUMBER")
