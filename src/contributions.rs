@@ -6,17 +6,20 @@ use tabular::{Table, row};
 
 // Types
 
+#[derive(Clone)]
 pub struct GitContributor {
 	id: GitIdentity,
 	commits: usize,
 	file_contributions: Vec<GitFileContribution>,
 }
 
+#[derive(Clone)]
 struct GitIdentity {
 	email: String,
 	author_names: Vec<String>,
 }
 
+#[derive(Clone)]
 struct GitFileContribution {
 	lines_added: usize,
 	lines_deleted: usize,
