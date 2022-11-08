@@ -5,6 +5,7 @@ mod languages;
 mod log;
 mod repo;
 mod status;
+mod config;
 
 extern crate clap;
 use clap::{
@@ -34,18 +35,21 @@ extern crate chrono;
 	name = "gl",
 	author = "Jake·W.·Ireland.·<jakewilliami@icloud.com>",
 	version = crate_version!(),
-	about = "Git log and other personalised git utilities.",
-	long_about = "Git log and other personalised git utilities.  By default (i.e., without any arguments), it will print the last 10 commits nicely.",
 )]
+/// Git log and other personalised git utilities.
+///
+/// By default (i.e., without any arguments), it will print the last 10 commits nicely.
 struct Cli {
-	/// Given a number, will print the last n commits nicely.  By default, the programme will print the last 10 commits
+	/// Given a number, will print the last n commits nicely.
+	///
+	/// By default, the programme will print the last 10 commits
 	#[arg(
 		// TODO: as well as -n, we should also be able to do -10, -100, -3, etc
 		action = ArgAction::Set,
 		num_args = 1,
 		value_parser = value_parser!(usize),
 		value_name = "n commits",
-		default_missing_value = "10",
+		// default_missing_value = "10",
 	)]
 	log_number: Option<usize>,
 
@@ -166,8 +170,13 @@ struct Cli {
 fn main() {
 	let cli = Cli::parse();
 
-	if let Some(n) = cli.log_number {
-		log::get_git_log(n);
+	// Display log
+	if std::env::args().len() <= 1 {
+		log::get_git_log(config::DEFAULT_TOP_N_LOG);
+	} else {
+		if let Some(n) = cli.log_number {
+			log::get_git_log(n);
+		}
 	}
 
 	// show languages
