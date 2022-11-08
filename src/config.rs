@@ -7,6 +7,8 @@ pub const ME_IDENTITY: [&str; 4] = [
 	"jakewilliami@icloud.com",
 ];
 
+// Top n results
+pub const DEFAULT_TOP_N_LOG: usize = 10;
+
 // Global
 pub static BASE_DIR: &str = "/Users/jakeireland/projects/";
-
