@@ -62,11 +62,10 @@ fn git_log(n: usize, opts: &GitLogOptions) -> String {
     cmd.arg("--no-merges");
 
     // Specify log format
-    // let mut pretty_format = String::from("--pr")
-    // cmd.arg("--pretty=format:\"%C(bold yellow)%h%Creset -%C(bold green)%d%Creset %s %C(bold red)(%cr)%Creset %C(bold blue)<%an>%Creset\"");
     cmd.arg(format!("--pretty=format:\"{}\"", log_fmt_str(opts)));
-
-    cmd.arg("--date=format:\"%Y-%m-%d\"");
+    if !opts.relative {
+        cmd.arg("--date=format:\"%a %d %b %Y\"");
+    }
 
     cmd.arg("--abbrev-commit");
     cmd.arg(&n_str);
@@ -91,7 +90,13 @@ fn log_fmt_str(opts: &GitLogOptions) -> String {
     let commit = colourise_log_fmt("h", Some("bold yellow"), None, None, opts);
     let branch_tag = colourise_log_fmt("d", Some("bold green"), Some("-"), None, opts);
     let msg = colourise_log_fmt("s", None, None, Some(""), opts);
-    let time = colourise_log_fmt("cr", Some("bold red"), None, Some("()"), opts);
+    let time = colourise_log_fmt(
+        if opts.relative { "cr" } else { "cd" },
+        Some("bold red"),
+        None,
+        Some("()"),
+        opts,
+    );
     let author = colourise_log_fmt("an", Some("bold blue"), None, Some("<>"), opts);
     format!("{} {} {} {} {}", commit, branch_tag, msg, time, author)
 }
