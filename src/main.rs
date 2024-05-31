@@ -161,24 +161,32 @@ struct Cli {
         num_args = 0,
     )]
     author_contrib_stats: Option<bool>,
+
+    /// Display git log with absolute commit dates
+    #[arg(
+        short = 'a',
+        long = "abs",
+        action = ArgAction::SetTrue,
+        num_args = 0,
+    )]
+    absolute: Option<bool>,
 }
 
 fn main() {
     let cli = Cli::parse();
     let opts = opts::GitLogOptions {
+        relative: !cli.absolute.unwrap_or(true),
         // https://no-color.org/
         colour: !(std::env::var("NO_COLOR").is_ok() || std::env::var("NO_COLOUR").is_ok()),
     };
 
-    // Display log
-    if std::env::args().len() <= 1 {
-        log::get_git_log(config::DEFAULT_TOP_N_LOG, &opts);
-    } else if let Some(n) = cli.log_number {
-        log::get_git_log(n, &opts);
-    }
+    // We need to handle the default case by setting a logical to check if
+    // the user should expect the default behaviour
+    let mut non_default_option = false;
 
     // show languages
     if let Some(n) = cli.languages {
+        non_default_option = true;
         // This parses _and_ prints the language output
         // languages::parse_language_data();
         let language_summary = languages::construct_language_summary();
@@ -188,6 +196,7 @@ fn main() {
 
     // show status of git repo
     if let Some(dir) = cli.status {
+        non_default_option = true;
         let maybe_dir = if dir.is_empty() { None } else { Some(dir) };
         status::get_git_status(&maybe_dir, &opts);
     };
@@ -195,6 +204,7 @@ fn main() {
     // show statuses of predefined git repos
     if let Some(global_status) = cli.global_status {
         if global_status {
+            non_default_option = true;
             status::global_status(&opts);
         }
     };
@@ -202,6 +212,7 @@ fn main() {
     // show branch name
     if let Some(show_branch) = cli.branch {
         if show_branch {
+            non_default_option = true;
             let current_branch = branch::current_branch();
             if let Some(current_branch) = current_branch {
                 println!("{}", current_branch);
@@ -212,6 +223,7 @@ fn main() {
     // show branches
     if let Some(show_local_branches) = cli.local_branches {
         if show_local_branches {
+            non_default_option = true;
             branch::get_branch_names(branch::BranchListings::Local, &opts);
         }
     }
@@ -219,6 +231,7 @@ fn main() {
     // show remote branches
     if let Some(show_remote_branches) = cli.remote_branches {
         if show_remote_branches {
+            non_default_option = true;
             branch::get_branch_names(branch::BranchListings::Remotes, &opts);
         }
     }
@@ -226,6 +239,7 @@ fn main() {
     // show the current repository
     if let Some(show_repo_name) = cli.repo_name {
         if show_repo_name {
+            non_default_option = true;
             let current_repo = repo::current_repository();
             if let Some(current_repo) = current_repo {
                 println!("{}", current_repo);
@@ -236,11 +250,13 @@ fn main() {
     // show commit count
     if let Some(show_commit_count) = cli.commit_count {
         if show_commit_count {
+            non_default_option = true;
             commitcount::get_commit_count("today", &opts);
         }
     }
 
     if let Some(commit_count_when) = cli.commit_count_when {
+        non_default_option = true;
         commitcount::get_commit_count(&commit_count_when, &opts);
     }
 
@@ -254,6 +270,7 @@ fn main() {
     };
 
     if let Some(contributors) = contributors {
+        non_default_option = true;
         // show number of commits per author, sorted by commit
         if show_author_commit_counts {
             contributions::display_git_author_frequency(contributors.clone());
@@ -263,5 +280,12 @@ fn main() {
         if show_author_contrib_stats {
             contributions::display_git_contributions_per_author(contributors.clone());
         }
+    }
+
+    // Display log (default or "base" behaviour)
+    if let Some(n) = cli.log_number {
+        log::get_git_log(n, &opts);
+    } else if !non_default_option {
+        log::get_git_log(config::DEFAULT_TOP_N_LOG, &opts);
     }
 }
