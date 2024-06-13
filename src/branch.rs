@@ -1,6 +1,5 @@
+use super::opts::GitLogOptions;
 use std::process::{Command, Stdio};
-
-use crate::opts::GitLogOptions;
 
 pub enum BranchListings {
     Local,

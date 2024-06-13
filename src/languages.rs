@@ -1,15 +1,11 @@
+use super::opts::GitLogOptions;
+use super::repo;
+use colored::*;
+use colorsys::Rgb;
+use hyperpolyglot::{get_language_breakdown, Detection, Language};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::path::PathBuf;
-
-extern crate hyperpolyglot;
-use hyperpolyglot::{get_language_breakdown, Detection, Language};
-
-use colored::*;
-use colorsys::Rgb;
-
-use crate::opts::GitLogOptions;
-use crate::repo;
 
 pub struct LanguageSummary {
     language: Option<Language>,

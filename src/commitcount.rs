@@ -1,7 +1,7 @@
 use super::branch::current_branch;
+use super::opts::GitLogOptions;
 use super::repo::current_repository;
-use crate::opts::GitLogOptions;
-use chrono::{DateTime, Duration, Local};
+use chrono::{DateTime, Duration, Local, NaiveTime};
 use colored::*;
 use std::process::{Command, Stdio};
 
@@ -64,7 +64,7 @@ pub fn get_commit_count(input: &str, opts: &GitLogOptions) {
 
 fn commit_count_today() -> Option<String> {
     // get the date of interest as a number of seconds
-    let today_start: i64 = Local::today().and_hms_milli(0, 0, 0, 0).timestamp();
+    let today_start: i64 = Local::now().with_time(NaiveTime::MIN).unwrap().timestamp();
     let now: i64 = Local::now().timestamp();
 
     // get the commit count for this period
@@ -73,7 +73,7 @@ fn commit_count_today() -> Option<String> {
 
 fn commit_count_yesterday() -> Option<String> {
     // get the datetimes of interest
-    let today_start: DateTime<Local> = Local::today().and_hms_milli(0, 0, 0, 0);
+    let today_start: DateTime<Local> = Local::now().with_time(NaiveTime::MIN).unwrap();
     let yesterday_start: DateTime<Local> = today_start - Duration::days(1);
     // calculate those values in seconds
     let today_timestamp: i64 = today_start.timestamp();
@@ -87,7 +87,7 @@ fn commit_count_yesterday() -> Option<String> {
 
 fn commit_count_since(n: isize) -> Option<String> {
     // get the datetimes of interest
-    let today_start: DateTime<Local> = Local::today().and_hms_milli(0, 0, 0, 0);
+    let today_start: DateTime<Local> = Local::now().with_time(NaiveTime::MIN).unwrap();
     let since_start: DateTime<Local> = today_start - Duration::days(n as i64);
     let now: i64 = Local::now().timestamp();
     // calculate those values in seconds

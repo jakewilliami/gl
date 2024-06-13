@@ -1,3 +1,5 @@
+use clap::{crate_version, value_parser, ArgAction, Parser};
+
 mod branch;
 mod commitcount;
 mod config;
@@ -7,16 +9,6 @@ mod log;
 mod opts;
 mod repo;
 mod status;
-
-extern crate clap;
-use clap::{crate_version, value_parser, ArgAction, Parser};
-
-// needed for log.rs
-extern crate colored;
-extern crate regex;
-
-// needed for commitcount.rs
-extern crate chrono;
 
 // TODO list (delete help commands as I go)
 // -i | --issues        Prints currently open issues in present repository.

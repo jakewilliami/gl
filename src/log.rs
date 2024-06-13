@@ -1,10 +1,8 @@
+use super::config;
+use super::opts::GitLogOptions;
 use colored::*;
 use regex::Regex;
 use std::process::{Command, Stdio};
-
-// https://stackoverflow.com/a/49476448/12069968 (comment #2)
-use crate::config;
-use crate::opts::GitLogOptions;
 
 pub fn get_git_log(n: usize, opts: &GitLogOptions) {
     let log: String = git_log(n, opts);

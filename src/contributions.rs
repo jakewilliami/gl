@@ -1,7 +1,6 @@
+use regex::Regex;
 use std::collections::HashMap;
 use std::process::{Command, Stdio};
-
-use regex::Regex;
 use tabular::{row, Table};
 
 // Types

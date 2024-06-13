@@ -1,10 +1,9 @@
+use super::config;
+use super::opts::GitLogOptions;
 use std::ffi::OsString;
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::str;
-
-use crate::config;
-use crate::opts::GitLogOptions;
 
 pub fn get_git_status(dir: &Option<String>, opts: &GitLogOptions) {
     let given_dir: PathBuf = if (dir).is_none() {
