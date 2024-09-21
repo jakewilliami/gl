@@ -269,23 +269,20 @@ fn main() {
     let show_contrib_graph = cli.contrib_graph.unwrap_or(false);
     let contributors =
         if show_author_commit_counts || show_author_contrib_stats || show_contrib_graph {
-            Some(contributions::git_contributor_stats())
+            Some(contributions::git_contributors())
         } else {
             None
         };
-
     if let Some(contributors) = contributors {
         non_default_option = true;
         // show number of commits per author, sorted by commit
         if show_author_commit_counts {
             contributions::display_git_author_frequency(contributors.clone());
         }
-
         // show contribution stats per author, sorted by lines added + deleted
         if show_author_contrib_stats {
             contributions::display_git_contributions_per_author(contributors.clone());
         }
-
         // Show contributions graph
         if show_contrib_graph {
             contributions::display_git_contributions_graph(contributors.clone());
@@ -294,8 +291,8 @@ fn main() {
 
     // Display log (default or "base" behaviour)
     if let Some(n) = cli.log_number {
-        log::get_git_log(n, &opts);
+        log::display_git_log(n, &opts);
     } else if !non_default_option {
-        log::get_git_log(config::DEFAULT_TOP_N_LOG, &opts);
+        log::display_git_log(config::DEFAULT_TOP_N_LOG, &opts);
     }
 }

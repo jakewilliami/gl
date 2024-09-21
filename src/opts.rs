@@ -1,3 +1,4 @@
+#[derive(Clone, Copy)]
 pub struct GitLogOptions {
     pub relative: bool, // relative commit dates
     pub colour: bool,

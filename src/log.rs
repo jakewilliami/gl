@@ -43,7 +43,7 @@ impl Format for GitCommit {
 }
 
 pub fn display_git_log(n: usize, opts: &GitLogOptions) {
-    let logs: Vec<GitCommit> = git_log(n, opts);
+    let logs: Vec<GitCommit> = git_log(Some(n), Some(opts));
 
     for log in logs {
         println!("{}", log.pretty(opts));

@@ -10,14 +10,14 @@ pub struct GitCommit {
     hash: String,
     meta: Option<String>,
     message: String,
-    date: CommitDate,
-    id: GitIdentity,
+    pub date: CommitDate,
+    pub id: GitIdentity,
     pub raw: String,
 }
 
 #[derive(Clone)]
-struct CommitDate {
-    abs: DateTime<Local>,
+pub struct CommitDate {
+    pub abs: DateTime<Local>,
     repr: String,
 }
 
@@ -35,14 +35,21 @@ impl HashFormat for String {
     }
 }
 
-pub fn git_log(n: Option<usize>, opts: &GitLogOptions) -> Vec<GitCommit> {
+pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit> {
+    let opts = if let Some(opts) = opts {
+        *opts
+    } else {
+        let opts = GitLogOptions::default();
+        opts
+    };
+
     let re = Regex::new(
         r"^(?P<raw>(?P<hash>[a-f0-9]+)\s\-\s(\((?P<meta>[^\)]+)\)\s)?(?P<message>.+)\((?P<daterepr>[^\)]+)\)\s<(?P<author>[^>]+)>)\s\{\{dateabs\:\s'(?P<dateabs>[^']+)',\shash\:\s'(?P<fullhash>[a-f0-9^']+)',\semail\:\s'(?P<email>[^']+)'\}\}$",
     )
         .unwrap();
 
     let mut logs: Vec<GitCommit> = Vec::new();
-    let logs_str = git_log_str(n, opts);
+    let logs_str = git_log_str(n, &opts);
     for log in logs_str.split_terminator('\n') {
         let log: String = log.replace('\"', "");
         let log_stripped = strip_ansi_escapes::strip_str(&log);
