@@ -1,9 +1,11 @@
 use clap::{crate_version, value_parser, ArgAction, Parser};
 
 mod branch;
+mod commit;
 mod commitcount;
 mod config;
 mod contributions;
+mod identity;
 mod languages;
 mod log;
 mod opts;

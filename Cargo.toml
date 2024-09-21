@@ -14,5 +14,6 @@ colorsys = "0.6.7"
 hyperpolyglot = "0.1.7"
 json = "0.12.4"
 regex = "1.10.4"
+strip-ansi-escapes = "0.2.0"
 tabular = "0.2.0"
 

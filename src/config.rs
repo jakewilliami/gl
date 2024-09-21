@@ -12,3 +12,6 @@ pub const DEFAULT_TOP_N_LOG: usize = 10;
 
 // Global
 pub static BASE_DIR: &str = "/Users/jakeireland/projects/";
+
+// Misc
+pub const SHORT_HASH_LENGTH: usize = 7;
