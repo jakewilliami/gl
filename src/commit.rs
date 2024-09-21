@@ -35,7 +35,7 @@ impl HashFormat for String {
     }
 }
 
-pub fn git_log(n: usize, opts: &GitLogOptions) -> Vec<GitCommit> {
+pub fn git_log(n: Option<usize>, opts: &GitLogOptions) -> Vec<GitCommit> {
     let re = Regex::new(
         r"^(?P<raw>(?P<hash>[a-f0-9]+)\s\-\s(\((?P<meta>[^\)]+)\)\s)?(?P<message>.+)\((?P<daterepr>[^\)]+)\)\s<(?P<author>[^>]+)>)\s\{\{dateabs\:\s'(?P<dateabs>[^']+)',\shash\:\s'(?P<fullhash>[a-f0-9^']+)',\semail\:\s'(?P<email>[^']+)'\}\}$",
     )
@@ -82,11 +82,7 @@ pub fn git_log(n: usize, opts: &GitLogOptions) -> Vec<GitCommit> {
     logs
 }
 
-fn git_log_str(n: usize, opts: &GitLogOptions) -> String {
-    let mut n_str = String::new();
-    n_str.push('-');
-    n_str.push_str(&n.to_string());
-
+fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
     let mut cmd = Command::new("git");
     cmd.arg("log");
     cmd.arg("--color");
@@ -106,7 +102,13 @@ fn git_log_str(n: usize, opts: &GitLogOptions) -> String {
     }
 
     cmd.arg("--abbrev-commit");
-    cmd.arg(&n_str);
+
+    if let Some(n) = n {
+        let mut n_str = String::new();
+        n_str.push('-');
+        n_str.push_str(&n.to_string());
+        cmd.arg(&n_str);
+    }
 
     let output = cmd
         .stdout(Stdio::piped())
