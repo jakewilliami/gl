@@ -102,6 +102,12 @@ pub fn display_git_author_frequency(contributors: Vec<GitContributor>) {
     println!("{}", table);
 }
 
+pub fn display_git_contributions_graph(_contributors: Vec<GitContributor>) {
+    // TODO: don't I need a different structure?
+    // TODO: number of commits per day
+    todo!()
+}
+
 // Constructor methods
 
 pub fn git_contributor_stats() -> Vec<GitContributor> {

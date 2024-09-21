@@ -154,6 +154,15 @@ struct Cli {
     )]
     author_contrib_stats: Option<bool>,
 
+    /// Display overall contribution statistics as a graph
+    #[arg(
+        short = 'G',
+        long = "contrib-graph",
+        action = ArgAction::SetTrue,
+        num_args = 0,
+    )]
+    contrib_graph: Option<bool>,
+
     /// Display git log with absolute commit dates
     #[arg(
         short = 'a',
@@ -255,11 +264,13 @@ fn main() {
     // Calculate contribution stats
     let show_author_commit_counts = cli.author_commit_counts.unwrap_or(false);
     let show_author_contrib_stats = cli.author_contrib_stats.unwrap_or(false);
-    let contributors = if show_author_commit_counts || show_author_contrib_stats {
-        Some(contributions::git_contributor_stats())
-    } else {
-        None
-    };
+    let show_contrib_graph = cli.contrib_graph.unwrap_or(false);
+    let contributors =
+        if show_author_commit_counts || show_author_contrib_stats || show_contrib_graph {
+            Some(contributions::git_contributor_stats())
+        } else {
+            None
+        };
 
     if let Some(contributors) = contributors {
         non_default_option = true;
@@ -271,6 +282,11 @@ fn main() {
         // show contribution stats per author, sorted by lines added + deleted
         if show_author_contrib_stats {
             contributions::display_git_contributions_per_author(contributors.clone());
+        }
+
+        // Show contributions graph
+        if show_contrib_graph {
+            contributions::display_git_contributions_graph(contributors.clone());
         }
     }
 
