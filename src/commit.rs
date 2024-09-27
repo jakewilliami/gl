@@ -65,6 +65,7 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
                     if opts.relative {
                         DateTime::parse_from_rfc2822(date_str).unwrap().into()
                     } else {
+                        // TODO: this is slightly wrong, as it doesn't account for the time zone of the commit, it just uses the local timezone.  We need to extract the commit time zone from the git log command
                         let now = Local::now();
                         let offset = now.offset();
                         NaiveDate::parse_from_str(date_str, "%a %d %b %Y")
