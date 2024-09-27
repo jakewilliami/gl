@@ -1,10 +1,14 @@
 use super::commit::{git_log, GitCommit};
 use super::identity::GitIdentity;
-use chrono::NaiveDate;
+use chrono::{Duration, Local, NaiveDate};
 use regex::Regex;
+use std::cmp::max;
 use std::collections::HashMap;
 use std::process::{Command, Stdio};
 use tabular::{row, Table};
+use textplots::{
+    Chart, ColorPlot, LabelBuilder, LabelFormat, Plot, Shape, TickDisplay, TickDisplayBuilder,
+};
 
 // Types
 
@@ -139,10 +143,93 @@ pub fn display_git_author_frequency(contributors: Vec<GitContributor>) {
     println!("{}", table);
 }
 
-pub fn display_git_contributions_graph(_contributors: Vec<GitContributor>) {
-    // TODO: don't I need a different structure?
-    // TODO: number of commits per day
-    todo!()
+pub fn display_git_contributions_graph(contributors: Vec<GitContributor>) {
+    let commit_dates_map = git_contributions_by_date(contributors);
+    let commit_dates = git_contributions_by_date_vec(&commit_dates_map);
+
+    // Get terminal size to inform graph size
+    let tsz = termsize::get().unwrap_or(termsize::Size { rows: 0, cols: 0 });
+
+    // Set reasonable defaults for graph size
+    let w: u32 = max(if tsz.cols == 0 { 40 } else { tsz.cols.into() }, 32);
+    let h: u32 = max(if tsz.rows == 0 { 60 } else { tsz.rows.into() }, 3);
+
+    // Compute points
+    let points = commit_dates
+        .iter()
+        .enumerate()
+        .map(|(i, (_d, n))| (i as f32, *n as f32))
+        .collect::<Vec<_>>();
+
+    // Get x bounds
+    let xmax = commit_dates.len();
+    let xstart = commit_dates[0].0;
+
+    // Construct chart
+    // See: github.com/loony-bean/textplots-rs/blob/63a418da/examples/label.rs
+    Chart::new(w, h, 0.0, xmax as f32)
+        .linecolorplot(
+            &Shape::Lines(&points),
+            // TODO: consider a more dynamic approach to colour selection as terminal background colour may differ
+            rgb::RGB {
+                r: 10,
+                g: 100,
+                b: 200,
+            },
+        )
+        .x_label_format(LabelFormat::Custom(Box::new(move |val| {
+            format!("{}", xstart + Duration::days(val as i64))
+        })))
+        .y_label_format(LabelFormat::Custom(Box::new(move |val| {
+            format!("{}", val as isize)
+        })))
+        .y_tick_display(TickDisplay::Dense)
+        .nice();
+}
+
+fn coarsen_contributions_by_date_vec(
+    contributions_by_date_vec: Vec<(NaiveDate, usize)>,
+    bins: usize,
+) -> Vec<usize> {
+    // TODO: handle bins > length of input vector
+    let m = contributions_by_date_vec.len() / bins + 1;
+    let mut v = vec![0; bins];
+    for (i, (_d, n)) in contributions_by_date_vec.iter().enumerate() {
+        let j = i / m;
+        v[j] += n;
+    }
+
+    v
+}
+
+fn git_contributions_by_date_vec(
+    contributions_by_date: &HashMap<NaiveDate, usize>,
+) -> Vec<(NaiveDate, usize)> {
+    let d1 = contributions_by_date.keys().min().unwrap();
+    let d2 = Local::now().date_naive();
+
+    let mut contributions = Vec::new();
+    let mut d = *d1;
+    while d <= d2 {
+        let n = contributions_by_date.get(&d).unwrap_or(&0);
+        contributions.push((d, *n));
+        d += Duration::days(1);
+    }
+
+    contributions
+}
+
+fn git_contributions_by_date(contributors: Vec<GitContributor>) -> HashMap<NaiveDate, usize> {
+    let mut commit_dates: HashMap<NaiveDate, usize> = HashMap::new();
+    for contributor in contributors {
+        for (date, count) in contributor.commit_dates().iter() {
+            commit_dates
+                .entry(*date)
+                .and_modify(|n| *n += count)
+                .or_insert(*count);
+        }
+    }
+    commit_dates
 }
 
 // Constructor methods
