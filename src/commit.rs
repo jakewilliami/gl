@@ -7,8 +7,11 @@ use std::process::{Command, Stdio};
 
 #[derive(Clone)]
 pub struct GitCommit {
+    #[allow(dead_code)]
     hash: String,
+    #[allow(dead_code)]
     meta: Option<String>,
+    #[allow(dead_code)]
     message: String,
     pub date: CommitDate,
     pub id: GitIdentity,
@@ -18,10 +21,12 @@ pub struct GitCommit {
 #[derive(Clone)]
 pub struct CommitDate {
     pub abs: DateTime<Local>,
+    #[allow(dead_code)]
     repr: String,
 }
 
 pub trait HashFormat {
+    #[allow(dead_code)]
     fn short(&self) -> String;
 }
 

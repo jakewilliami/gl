@@ -7,7 +7,7 @@ use std::collections::HashMap;
 use std::process::{Command, Stdio};
 use tabular::{row, Table};
 use textplots::{
-    Chart, ColorPlot, LabelBuilder, LabelFormat, Plot, Shape, TickDisplay, TickDisplayBuilder,
+    Chart, ColorPlot, LabelBuilder, LabelFormat, Shape, TickDisplay, TickDisplayBuilder,
 };
 
 // Types
@@ -32,8 +32,10 @@ struct GitFileContributions {
 }
 
 struct ContributionStats {
+    #[allow(dead_code)]
     commits: usize,
     file_contributions: GitFileContributions,
+    #[allow(dead_code)]
     commit_dates: HashMap<NaiveDate, usize>,
 }
 
@@ -187,6 +189,7 @@ pub fn display_git_contributions_graph(contributors: Vec<GitContributor>) {
         .nice();
 }
 
+#[allow(dead_code)]
 fn coarsen_contributions_by_date_vec(
     contributions_by_date_vec: Vec<(NaiveDate, usize)>,
     bins: usize,
