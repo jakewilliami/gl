@@ -2,8 +2,17 @@ use super::config::SHORT_HASH_LENGTH;
 use super::identity::GitIdentity;
 use super::opts::GitLogOptions;
 use chrono::{DateTime, Local, NaiveDate};
+use lazy_static::lazy_static;
 use regex::Regex;
-use std::process::{Command, Stdio};
+use std::{
+    char,
+    process::{Command, Stdio},
+};
+
+lazy_static! {
+    // This is a good separating dash, but relies on it not being used inside commit messages!
+    static ref META_SEP_CHAR: char = char::from_u32(0x2E3A).unwrap();
+}
 
 #[derive(Clone)]
 pub struct GitCommit {
@@ -44,12 +53,11 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
     let opts = if let Some(opts) = opts {
         *opts
     } else {
-        let opts = GitLogOptions::default();
-        opts
+        GitLogOptions::default()
     };
 
     let re = Regex::new(
-        r"^(?P<raw>(?P<hash>[a-f0-9]+)\s\-\s(\((?P<meta>[^\)]+)\)\s)?(?P<message>.+)\((?P<daterepr>[^\)]+)\)\s<(?P<author>[^>]+)>)\s\{\{dateabs\:\s'(?P<dateabs>[^']+)',\shash\:\s'(?P<fullhash>[a-f0-9^']+)',\semail\:\s'(?P<email>[^']+)'\}\}$",
+        &format!(r"^(?P<raw>(?P<hash>[a-f0-9]+)\s\-\s(\((?P<meta>[^\)]+)\)\s)?(?P<message>.+)\((?P<daterepr>[^\)]+)\)\s<(?P<author>[^>]+)>){}dateabs\:\s'(?P<dateabs>[^']+)',\shash\:\s'(?P<fullhash>[a-f0-9^']+)',\semail\:\s'(?P<email>[^']+)'$", META_SEP_CHAR.to_string()),
     )
         .unwrap();
 
@@ -88,7 +96,13 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
                 email: re_match.name("email").unwrap().as_str().to_string(),
                 names: vec![re_match.name("author").unwrap().as_str().to_string()],
             },
-            raw: log.split("{{").next().unwrap_or("").trim().to_string(),
+            // If the separating char is used in the commit message then it's Joever
+            raw: log
+                .split(&META_SEP_CHAR.to_string())
+                .next()
+                .unwrap_or("")
+                .trim()
+                .to_string(),
         });
     }
 
@@ -104,8 +118,9 @@ fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
     // Specify log format
     // NOTE: at the end of the main format log, we pull additional meta information for the GitCommit struct
     cmd.arg(format!(
-        "--pretty=format:\"{} {{{{dateabs: '%cd', hash: '%H', email: '%ae'}}}}\"",
-        log_fmt_str(opts)
+        "--pretty=format:\"{}{}dateabs: '%cd', hash: '%H', email: '%ae'\"",
+        log_fmt_str(opts),
+        META_SEP_CHAR.to_string(),
     ));
     if opts.relative {
         // Even though we don't explicitly print the full date when we show the relative commit time, it is useful to have the RFC-2822 date format for parsing in the GitCommit

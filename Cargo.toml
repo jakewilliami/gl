@@ -1,6 +1,6 @@
 [package]
 name = "gl"
-version = "2.3.0"
+version = "2.3.1"
 authors = ["Jake W. Ireland <jakewilliami@icloud.com>"]
 edition = "2018"
 
@@ -13,6 +13,7 @@ colored = "2.1.0"
 colorsys = "0.6.7"
 hyperpolyglot = "0.1.7"
 json = "0.12.4"
+lazy_static = "1.5.0"
 regex = "1.10.4"
 rgb = "0.8.50"
 strip-ansi-escapes = "0.2.0"
