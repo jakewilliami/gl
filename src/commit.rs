@@ -58,7 +58,7 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
     };
 
     let re = Regex::new(
-        &format!(r"^(?P<raw>(?P<hash>[a-f0-9]+)\s\-\s(\((?P<meta>[^\)]+)\)\s)?(?P<message>.+)\((?P<daterepr>[^\)]+)\)\s<(?P<author>[^>]+)>){}dateabs\:\s'(?P<dateabs>[^']+)',\shash\:\s'(?P<fullhash>[a-f0-9^']+)',\semail\:\s'(?P<email>[^']+)'$", META_SEP_CHAR.to_string()),
+        &format!(r"^(?P<raw>(?P<hash>[a-f0-9]+)\s\-\s(\((?P<meta>[^\)]+)\)\s)?(?P<message>.+)\((?P<daterepr>[^\)]+)\)\s<(?P<author>[^>]+)>){}dateabs\:\s'(?P<dateabs>[^']+)',\shash\:\s'(?P<fullhash>[a-f0-9^']+)',\semail\:\s'(?P<email>[^']*)'$", META_SEP_CHAR.to_string()),
     )
         .unwrap();
 
