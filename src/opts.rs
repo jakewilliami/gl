@@ -2,6 +2,7 @@
 pub struct GitLogOptions {
     pub relative: bool, // relative commit dates
     pub colour: bool,
+    pub reverse: bool,
 }
 
 impl Default for GitLogOptions {
@@ -9,6 +10,7 @@ impl Default for GitLogOptions {
         Self {
             relative: true,
             colour: true,
+            reverse: false,
         }
     }
 }

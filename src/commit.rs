@@ -1,4 +1,5 @@
 use super::config::SHORT_HASH_LENGTH;
+use super::count;
 use super::identity::GitIdentity;
 use super::opts::GitLogOptions;
 use chrono::{DateTime, Local, NaiveDate};
@@ -106,7 +107,12 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
         });
     }
 
-    logs
+    // Account for reverse option
+    if opts.reverse {
+        logs.into_iter().rev().collect()
+    } else {
+        logs
+    }
 }
 
 fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
@@ -132,10 +138,14 @@ fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
     cmd.arg("--abbrev-commit");
 
     if let Some(n) = n {
-        let mut n_str = String::new();
-        n_str.push('-');
-        n_str.push_str(&n.to_string());
-        cmd.arg(&n_str);
+        // If n is defined, restrict the log to only show n of them
+        cmd.arg(format!("-n {}", n));
+
+        // If the number of logs is defined, but so is rev, then we want to skip some number of logs
+        if opts.reverse {
+            let log_count = count::commit_count();
+            cmd.arg(format!("--skip={}", log_count - n));
+        }
     }
 
     let output = cmd

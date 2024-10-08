@@ -30,9 +30,9 @@ mod status;
 ///
 /// By default (i.e., without any arguments), it will print the last 10 commits nicely.
 struct Cli {
-    /// Given a number, will print the last n commits nicely.
+    /// Given a number, will print the last n commits nicely
     ///
-    /// By default, the programme will print the last 10 commits
+    /// By default, the programme will print the last 10 commits.  Can use with --rev to show least recent logs first
     #[arg(
         // TODO: as well as -n, we should also be able to do -10, -100, -3, etc
         action = ArgAction::Set,
@@ -43,7 +43,9 @@ struct Cli {
     )]
     log_number: Option<usize>,
 
-    /// Prints language breakdown in present repository.  Will print only top n languages if given value (optional).  Defaults to displaying all languages (you can also specify n = 0 for this behaviour)
+    /// Prints language breakdown in present repository
+    ///
+    /// Will print only top n languages if given value (optional).  Defaults to displaying all languages (you can also specify n = 0 for this behaviour)
     #[arg(
         short = 'l',
         long = "languages",
@@ -55,7 +57,9 @@ struct Cli {
     )]
     languages: Option<usize>,
 
-    /// Prints current git status minimally.  Defaults to the current directory, but you can specify a directory
+    /// Prints current git status minimally
+    ///
+    /// Defaults to the current directory, but you can specify a directory
     #[arg(
         short = 's',
         long = "status",
@@ -121,7 +125,9 @@ struct Cli {
     )]
     commit_count: Option<bool>,
 
-    /// Counts the number of commits for a specified day, or all time.  Given value "today" (see also -c), "yesterday", or some number of days ago
+    /// Counts the number of commits for a specified day, or all time
+    ///
+    /// Given value "today" (see also -c), "yesterday", or some number of days ago.  If no value is given, it will default to all time (you can also specify C = total for this behaviour)
     #[arg(
         // TODO:
         //   If you give it 2 numbers, it will show the number of commits since the first number but before the second number (days ago).
@@ -174,6 +180,14 @@ struct Cli {
         num_args = 0,
     )]
     absolute: Option<bool>,
+
+    /// Display the *least* recent logs (reverse order)
+    #[arg(
+        long = "rev",
+        action = ArgAction::SetTrue,
+        num_args = 0,
+    )]
+    reverse: Option<bool>,
 }
 
 fn main() {
@@ -182,6 +196,7 @@ fn main() {
         relative: !cli.absolute.unwrap_or(true),
         // https://no-color.org/
         colour: !(std::env::var("NO_COLOR").is_ok() || std::env::var("NO_COLOUR").is_ok()),
+        reverse: cli.reverse.unwrap_or(false),
     };
 
     // We need to handle the default case by setting a logical to check if
