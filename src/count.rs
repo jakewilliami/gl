@@ -29,28 +29,35 @@ pub fn get_commit_count(input: &str, opts: &GitLogOptions) {
     let branch_name = current_branch();
 
     // determine human-readable "since when" relative time
-    let when: String;
-    let mut past_tense: &str = "";
-
-    if input == "today" || input == "yesterday" {
-        when = input.to_string();
-
-        if input == "today" {
-            past_tense = "have "
-        }
-    } else {
-        when = format!("in the past {} days", &input);
+    let plural_maybe = match commit_count_val {
+        1 => "",
+        _ => "s",
+    };
+    let when = match input {
+        "today" | "yesterday" => String::from(input),
+        _ => format!("in the past {} days", input),
+    };
+    let verb_tense = match input {
+        "yesterday" => "were",
+        _ => match commit_count_val {
+            1 => "has been made",
+            _ => "have been made",
+        },
     };
 
     // print output
     // format output nicely (and ensure it's lovely and green)
     let out_message = format!(
-        "You {}made {} commits to {}/{} {}.",
-        past_tense,
+        // n commits have been made to {}/{} today
+        // n commits were made to {}/{} yesterday
+        // n commits have been made to {}/{} in the past {} days
+        "{} commit{} {} to {}/{} {}.",
         commit_count_val,
+        plural_maybe,
+        verb_tense,
         repo_name.unwrap(),
         branch_name.unwrap(),
-        when.as_str()
+        when,
     );
 
     if opts.colour {
@@ -68,10 +75,21 @@ pub fn get_commit_count_total(opts: &GitLogOptions) {
     let repo_name = current_repository();
     let branch_name = current_branch();
 
+    let plural_maybe = match commit_count_val {
+        1 => "",
+        _ => "s",
+    };
+    let have_plural_maybe = match commit_count_val {
+        1 => "has",
+        _ => "has",
+    };
+
     // format output nicely (and ensure it's lovely and green)
     let out_message = format!(
-        "You have made {} commits to {}/{}.",
+        "{} commit{} {} been made to {}/{}.",
         commit_count_val,
+        plural_maybe,
+        have_plural_maybe,
         repo_name.unwrap(),
         branch_name.unwrap(),
     );
