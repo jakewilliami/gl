@@ -32,7 +32,7 @@ mod status;
 struct Cli {
     /// Given a number, will print the last n commits nicely
     ///
-    /// By default, the programme will print the last 10 commits.  Can use with --rev to show least recent logs first
+    /// By default, the programme will print the last 10 commits.  Can use with --rev to show least recent logs first.  Can also use --all to show all logs
     #[arg(
         // TODO: as well as -n, we should also be able to do -10, -100, -3, etc
         action = ArgAction::Set,
@@ -188,6 +188,15 @@ struct Cli {
         num_args = 0,
     )]
     reverse: Option<bool>,
+
+    /// Display all logs
+    #[arg(
+        long = "all",
+        action = ArgAction::SetTrue,
+        num_args = 0,
+        conflicts_with = "log_number",
+    )]
+    all: Option<bool>,
 }
 
 fn main() {
@@ -197,6 +206,7 @@ fn main() {
         // https://no-color.org/
         colour: !(std::env::var("NO_COLOR").is_ok() || std::env::var("NO_COLOUR").is_ok()),
         reverse: cli.reverse.unwrap_or(false),
+        all: cli.all.unwrap_or(false),
     };
 
     // We need to handle the default case by setting a logical to check if

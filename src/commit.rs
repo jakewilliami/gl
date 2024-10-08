@@ -138,13 +138,16 @@ fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
     cmd.arg("--abbrev-commit");
 
     if let Some(n) = n {
-        // If n is defined, restrict the log to only show n of them
-        cmd.arg(format!("-n {}", n));
+        if !opts.all {
+            // If n is defined, restrict the log to only show n of them (only if we don't want to show all logs)
+            cmd.arg(format!("-n {}", n));
 
-        // If the number of logs is defined, but so is rev, then we want to skip some number of logs
-        if opts.reverse {
-            let log_count = count::commit_count();
-            cmd.arg(format!("--skip={}", log_count - n));
+            // If the number of logs is defined, but so is rev, then we want to skip some number of logs
+            // Note: if --all is specified, we don't want to skip anything.  --rev will be handled upstream if needed
+            if opts.reverse {
+                let log_count = count::commit_count();
+                cmd.arg(format!("--skip={}", log_count - n));
+            }
         }
     }
 
