@@ -197,6 +197,17 @@ struct Cli {
         conflicts_with = "log_number",
     )]
     all: Option<bool>,
+
+    /// Display count of commits
+    ///
+    /// See also -C/--commit-count-when
+    #[arg(
+        long = "count",
+        action = ArgAction::SetTrue,
+        num_args = 0,
+        conflicts_with = "commit_count_when",
+    )]
+    count: Option<bool>,
 }
 
 fn main() {
@@ -281,6 +292,14 @@ fn main() {
         if show_commit_count {
             non_default_option = true;
             count::get_commit_count("today", &opts);
+        }
+    }
+
+    if let Some(count) = cli.count {
+        // Equivalent to -C without arguments (i.e., commit_count_when = total)
+        if count {
+            non_default_option = true;
+            count::get_commit_count_total(&opts);
         }
     }
 
