@@ -2,9 +2,9 @@ use clap::{crate_version, value_parser, ArgAction, Parser};
 
 mod branch;
 mod commit;
-mod commitcount;
 mod config;
 mod contributions;
+mod count;
 mod identity;
 mod languages;
 mod log;
@@ -51,7 +51,7 @@ struct Cli {
         num_args = 0..=1,
         value_parser = value_parser!(usize),
         value_name = "n languages",
-        default_missing_value = "0",  // TODO: consider making this an isize, and using allow_negative_numbersd
+        default_missing_value = "0",  // TODO: consider making this an isize, and using allow_negative_numbers
     )]
     languages: Option<usize>,
 
@@ -121,7 +121,7 @@ struct Cli {
     )]
     commit_count: Option<bool>,
 
-    /// Counts the number of commits for a specified day.  Takes value "today" (see also -c), "yesterday", or some number of days ago
+    /// Counts the number of commits for a specified day, or all time.  Given value "today" (see also -c), "yesterday", or some number of days ago
     #[arg(
         // TODO:
         //   If you give it 2 numbers, it will show the number of commits since the first number but before the second number (days ago).
@@ -132,9 +132,10 @@ struct Cli {
         short = 'C',
         long = "commit-count-when",  // TODO: rename to "commit_count_at"; will need to update minor version (breaking change)
         action = ArgAction::Set,
-        num_args = 1,
+        num_args = 0..=1,
         value_name = "relative day quantifier",
         conflicts_with = "commit_count",
+        default_missing_value = "total",
     )]
     commit_count_when: Option<String>,
 
@@ -254,13 +255,17 @@ fn main() {
     if let Some(show_commit_count) = cli.commit_count {
         if show_commit_count {
             non_default_option = true;
-            commitcount::get_commit_count("today", &opts);
+            count::get_commit_count("today", &opts);
         }
     }
 
     if let Some(commit_count_when) = cli.commit_count_when {
         non_default_option = true;
-        commitcount::get_commit_count(&commit_count_when, &opts);
+        if commit_count_when == "total" {
+            count::get_commit_count_total(&opts);
+        } else {
+            count::get_commit_count(&commit_count_when, &opts);
+        }
     }
 
     // Calculate contribution stats
