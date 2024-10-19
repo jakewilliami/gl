@@ -13,6 +13,7 @@ impl Format for GitCommit {
         let re_named = Regex::new(r"<(?P<author>[^>]*)>").unwrap();
         let re = Regex::new(r"<([^>]*)>").unwrap();
         // TODO: in future, instead of using raw, we can add colours ourself
+        //   This would be extra beneficial as in some repos (for example, grafana), there are commits (for example, aba824a317) that have no author (%an), so we can use their name instead (at least, the first valid thing matching from identity---make an identity display function to find it)
         let log = &self.raw;
         let log: String = log.replace('\"', "");
         let auth = re_named
