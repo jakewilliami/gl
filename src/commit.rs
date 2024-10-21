@@ -58,7 +58,7 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
     };
 
     let re = Regex::new(
-        &format!(r"^(?P<raw>(?P<hash>[a-f0-9]+)\s\-\s(\((?P<meta>[^\)]+)\)\s)?(?P<message>.+)\((?P<daterepr>[^\)]+)\)\s<(?P<author>[^>]*)>){}dateabs\:\s'(?P<dateabs>[^']+)',\shash\:\s'(?P<fullhash>[a-f0-9^']+)',\semail\:\s'(?P<email>[^']*)'$", META_SEP_CHAR.to_string()),
+        &format!(r"^(?P<raw>(?P<hash>[a-f0-9]+)\s\-\s(\((?P<meta>[^\)]+)\)\s)?(?P<message>.+)\((?P<daterepr>[^\)]+)\)\s<(?P<author>[^>]*)>){}dateabs\:\s'(?P<dateabs>[^']+)',\shash\:\s'(?P<fullhash>[a-f0-9^']+)',\semail\:\s'(?P<email>[^']*)'$", *META_SEP_CHAR),
     )
         .unwrap();
 
@@ -126,7 +126,7 @@ fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
     cmd.arg(format!(
         "--pretty=format:\"{}{}dateabs: '%cd', hash: '%H', email: '%ae'\"",
         log_fmt_str(opts),
-        META_SEP_CHAR.to_string(),
+        *META_SEP_CHAR,
     ));
     if opts.relative {
         // Even though we don't explicitly print the full date when we show the relative commit time, it is useful to have the RFC-2822 date format for parsing in the GitCommit

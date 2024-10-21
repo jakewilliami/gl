@@ -184,7 +184,7 @@ fn commit_count_core(args: Vec<&str>) -> usize {
         }
     } else {
         eprintln!("[ERROR] Failed to get output from `git rev-list`");
-        return 0;
+        0
     }
 }
 
