@@ -50,7 +50,7 @@ trait ContributorStats {
 
 impl ContributorStats for GitContributor {
     fn commits(&self) -> usize {
-        (&self).contributions.commits.len()
+        self.contributions.commits.len()
     }
 
     fn file_contributions(&self) -> GitFileContributions {
