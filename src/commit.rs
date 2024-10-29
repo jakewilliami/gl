@@ -13,6 +13,26 @@ use std::{
 lazy_static! {
     // This is a good separating dash, but relies on it not being used inside commit messages!
     static ref META_SEP_CHAR: char = char::from_u32(0x2E3A).unwrap();
+
+    // Quotes for log metadata
+    static ref INITIAL_QUOTE_CHAR: char = char::from_u32(0x201C).unwrap();
+    static ref FINAL_QUOTE_CHAR: char = char::from_u32(0x201D).unwrap();
+
+    //Regex for commit logs
+    static ref UNTIL_FINAL_QUOTE_PAT: String = format!(r"[^{}]", *FINAL_QUOTE_CHAR);
+    static ref DATE_META_PAT: String = format!(r"(?P<dateabs>{}+)", *UNTIL_FINAL_QUOTE_PAT).quote();
+    static ref HASH_META_PAT: String = String::from(r"(?P<fullhash>[a-f0-9]+)").quote();
+    static ref EMAIL_META_PAT: String = format!(r"(?P<email>{}*)", *UNTIL_FINAL_QUOTE_PAT).quote();
+    static ref COMMIT_LOG_RE: Regex = Regex::new(
+        &format!(
+            r"^(?P<raw>(?P<hash>[a-f0-9]+)\s\-\s(\((?P<meta>[^\)]+)\)\s)?(?P<message>.+)\((?P<daterepr>[^\)]+)\)\s<(?P<author>[^>]*)>){}dateabs\:\s{},\shash\:\s{},\semail\:\s{}$",
+            *META_SEP_CHAR,
+            *DATE_META_PAT,
+            *HASH_META_PAT,
+            *EMAIL_META_PAT,
+        ),
+    )
+        .unwrap();
 }
 
 #[derive(Clone)]
@@ -50,6 +70,16 @@ impl HashFormat for String {
     }
 }
 
+trait Quote {
+    fn quote(&self) -> String;
+}
+
+impl Quote for String {
+    fn quote(&self) -> String {
+        format!("{}{}{}", *INITIAL_QUOTE_CHAR, &self, *FINAL_QUOTE_CHAR)
+    }
+}
+
 pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit> {
     let opts = if let Some(opts) = opts {
         *opts
@@ -57,17 +87,12 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
         GitLogOptions::default()
     };
 
-    let re = Regex::new(
-        &format!(r"^(?P<raw>(?P<hash>[a-f0-9]+)\s\-\s(\((?P<meta>[^\)]+)\)\s)?(?P<message>.+)\((?P<daterepr>[^\)]+)\)\s<(?P<author>[^>]*)>){}dateabs\:\s'(?P<dateabs>[^']+)',\shash\:\s'(?P<fullhash>[a-f0-9^']+)',\semail\:\s'(?P<email>[^']*)'$", *META_SEP_CHAR),
-    )
-        .unwrap();
-
     let mut logs: Vec<GitCommit> = Vec::new();
     let logs_str = git_log_str(n, &opts);
     for log in logs_str.split_terminator('\n') {
         let log: String = log.replace('\"', "");
         let log_stripped = strip_ansi_escapes::strip_str(&log);
-        let re_match = re.captures(&log_stripped).unwrap();
+        let re_match = COMMIT_LOG_RE.captures(&log_stripped).unwrap();
 
         logs.push(GitCommit {
             hash: re_match.name("fullhash").unwrap().as_str().to_string(),
@@ -124,9 +149,12 @@ fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
     // Specify log format
     // NOTE: at the end of the main format log, we pull additional meta information for the GitCommit struct
     cmd.arg(format!(
-        "--pretty=format:\"{}{}dateabs: '%cd', hash: '%H', email: '%ae'\"",
+        "--pretty=format:\"{}{}dateabs: {}, hash: {}, email: {}\"",
         log_fmt_str(opts),
         *META_SEP_CHAR,
+        String::from("%cd").quote(),
+        String::from("%H").quote(),
+        String::from("%ae").quote(),
     ));
     if opts.relative {
         // Even though we don't explicitly print the full date when we show the relative commit time, it is useful to have the RFC-2822 date format for parsing in the GitCommit
