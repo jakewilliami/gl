@@ -82,7 +82,7 @@ impl Quote for String {
 
 pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit> {
     let opts = if let Some(opts) = opts {
-        *opts
+        opts.clone()
     } else {
         GitLogOptions::default()
     };
@@ -156,11 +156,29 @@ fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
         String::from("%H").quote(),
         String::from("%ae").quote(),
     ));
+
     if opts.relative {
         // Even though we don't explicitly print the full date when we show the relative commit time, it is useful to have the RFC-2822 date format for parsing in the GitCommit
         cmd.arg("--date=rfc");
     } else {
         cmd.arg("--date=format:\"%a %d %b %Y\"");
+    }
+
+    // Apply log filters
+    //
+    // Could try with regex:
+    //   https://forums.freebsd.org/threads/58555/
+    //   https://stackoverflow.com/a/22971024/
+    //
+    // But it seems to work fine with multiple arguments
+    for author in &opts.authors {
+        // cmd.arg(format!("--author=\"{author}\""));
+        cmd.arg("--author").arg(author);
+    }
+
+    for needle in &opts.needles {
+        // cmd.arg(format!("--grep=\"{needle}\""));
+        cmd.arg("--grep").arg(needle);
     }
 
     cmd.arg("--abbrev-commit");

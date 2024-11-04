@@ -59,6 +59,22 @@ struct Cli {
     )]
     all: bool,
 
+    /// Filter log for specified commit author(s)
+    #[arg(
+        long = "author",
+        action = ArgAction::Append,
+        num_args = 1..=std::usize::MAX,
+    )]
+    authors: Vec<String>,
+
+    /// Filter log for commit messages matching text
+    #[arg(
+        long = "grep",
+        action = ArgAction::Append,
+        num_args = 1..=std::usize::MAX,
+    )]
+    grep: Vec<String>,
+
     #[clap(flatten)]
     group: Group,
 }
@@ -226,10 +242,15 @@ fn main() {
     let cli = Cli::parse();
     let opts = opts::GitLogOptions {
         relative: !cli.absolute,
+
         // https://no-color.org
         colour: !(std::env::var("NO_COLOR").is_ok() || std::env::var("NO_COLOUR").is_ok()),
         reverse: cli.reverse,
         all: cli.all,
+
+        // Filters
+        authors: cli.authors,
+        needles: cli.grep,
     };
 
     // Because all of these options are in a group, at most one branch should
