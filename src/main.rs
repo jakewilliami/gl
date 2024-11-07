@@ -170,7 +170,7 @@ pub struct Group {
         long = "commit-count",
         action = ArgAction::SetTrue,
         num_args = 0,
-        conflicts_with = "commit_count_when",
+        conflicts_with = "commit_count_at",
         default_value_t = false,
     )]
     commit_count: bool,
