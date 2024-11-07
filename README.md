@@ -26,3 +26,18 @@ $ chmod 755 ./gl
 $ mv ./gl /opt/local/bin
 ```
 
+## Profiling
+
+After reading [this](https://nnethercote.github.io/perf-book/profiling.html) (note to follow the build instructions there to maximise ), I was looking into [`flamegraph`](https://github.com/flamegraph-rs/flamegraph).  I was having issues with DTrace and system integrity protection using `flamegraph`, but the authors of `flamegraph` recommend [`samply`](https://github.com/mstange/samply) for macOS, which integrates well with [Firefox Profiler](https://profiler.firefox.com/).  It's easy to install:
+
+```bash
+$ cargo install --locked samply
+```
+
+And works really well:
+```bash
+$ RUSTFLAGS="-C symbol-mangling-version=v0" cargo build  # Do not specify --release; we want all debug information
+...
+
+$  samply record ./target/debug/gl <args...> > /dev/null
+```
