@@ -1,45 +1,88 @@
 use super::commit::{git_log, GitCommit};
-use super::config;
 use super::opts::GitLogOptions;
 use colored::*;
-use regex::Regex;
+use lazy_static::lazy_static;
+use std::collections::HashMap;
+
+lazy_static! {
+    // En dash
+    static ref INFO_SEP_CHAR: char = char::from_u32(0x2013).unwrap();
+}
 
 trait Format {
+    fn format_parts(&self, opts: &GitLogOptions) -> HashMap<&str, String>;
     fn pretty(&self, opts: &GitLogOptions) -> String;
 }
 
 impl Format for GitCommit {
-    fn pretty(&self, opts: &GitLogOptions) -> String {
-        let re_named = Regex::new(r"<(?P<author>[^>]*)>").unwrap();
-        let re = Regex::new(r"<([^>]*)>").unwrap();
-        // TODO: in future, instead of using raw, we can add colours ourself
-        //   This would be extra beneficial as in some repos (for example, grafana), there are commits (for example, aba824a317) that have no author (%an), so we can use their name instead (at least, the first valid thing matching from identity---make an identity display function to find it)
-        let log = &self.raw;
-        let log: String = log.replace('\"', "");
-        let auth = re_named
-            .captures(&log)
-            .unwrap()
-            .name("author") // using named groups
-            .unwrap()
-            .as_str()
-            .to_string();
+    fn format_parts(&self, opts: &GitLogOptions) -> HashMap<&str, String> {
+        let mut parts = HashMap::new();
 
-        // Need not colour author if colour not set
-        // TODO: do I need to use more regex here?  Can I not replace the regex to just match with the author's name (which we already obtained)?
-        if opts.colour && config::ME_IDENTITY.contains(&auth.as_str()) {
-            re.replace(&log, |caps: &regex::Captures| {
-                format!(
-                    "{}{}{}{}",
-                    "".normal().white(), // need this to clear the current line of any colours
-                    "<".truecolor(192, 207, 227), // this is the light blue colour I have, defined by \e[0m\e[36m$&\e[39m\e[0m
-                    &caps[1].truecolor(192, 207, 227),
-                    ">".truecolor(192, 207, 227)
-                )
-            })
-            .to_string()
-        } else {
-            log.to_string()
-        }
+        // 1. Hash
+        parts.insert("hash", self.hash.short.clone());
+
+        // 2. (Optional) ref name(s)
+        parts.insert("refnames", {
+            let mut refs = String::new();
+            if !self.refs.is_empty() {
+                refs.push('(');
+                for (i, ref_name) in self.refs.iter().enumerate() {
+                    refs.push_str(ref_name);
+
+                    if i < self.refs.len() - 1 {
+                        refs.push_str(", ");
+                    }
+                }
+                refs.push_str(") ");
+            }
+            refs
+        });
+
+        // 3. Message (head)
+        parts.insert("message", self.message.clone().trim().to_string());
+
+        // 4. Date
+        parts.insert("date", {
+            let mut date = String::new();
+            date.push('(');
+            if opts.relative {
+                date.push_str(&self.date.rel);
+            } else {
+                date.push_str(&self.date.format_abs());
+            }
+            date.push(')');
+            date
+        });
+
+        // 5. Identity
+        parts.insert("identity", {
+            let mut id = String::new();
+            if let Some(auth) = self.id.names.first() {
+                id.push_str(&format!("<{}>", auth));
+            }
+            id
+        });
+
+        parts
+    }
+
+    fn pretty(&self, opts: &GitLogOptions) -> String {
+        let parts = self.format_parts(opts);
+        let identity = parts.get("identity").unwrap();
+
+        format!(
+            "{} {} {}{} {} {}",
+            parts.get("hash").unwrap().yellow().bold(),
+            *INFO_SEP_CHAR,
+            parts.get("refnames").unwrap().green().bold(),
+            parts.get("message").unwrap(),
+            parts.get("date").unwrap().red().bold(),
+            if self.id.clone().is_me() {
+                identity.truecolor(192, 207, 227)
+            } else {
+                identity.blue().bold()
+            }
+        )
     }
 }
 

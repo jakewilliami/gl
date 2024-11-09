@@ -1,7 +1,10 @@
-use super::config::SHORT_HASH_LENGTH;
-use super::count;
-use super::identity::GitIdentity;
-use super::opts::GitLogOptions;
+use super::{
+    count,
+    date::CommitDate,
+    identity::GitIdentity,
+    opts::GitLogOptions,
+    quote::{Quote, FINAL_QUOTE_CHAR},
+};
 use chrono::{DateTime, Local, NaiveDate};
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -14,20 +17,18 @@ lazy_static! {
     // This is a good separating dash, but relies on it not being used inside commit messages!
     static ref META_SEP_CHAR: char = char::from_u32(0x2E3A).unwrap();
 
-    // Quotes for log metadata
-    static ref INITIAL_QUOTE_CHAR: char = char::from_u32(0x201C).unwrap();
-    static ref FINAL_QUOTE_CHAR: char = char::from_u32(0x201D).unwrap();
-
     //Regex for commit logs
     static ref UNTIL_FINAL_QUOTE_PAT: String = format!(r"[^{}]", *FINAL_QUOTE_CHAR);
-    static ref DATE_META_PAT: String = format!(r"(?P<dateabs>{}+)", *UNTIL_FINAL_QUOTE_PAT).quote();
+    static ref DATE_ABS_META_PAT: String = format!(r"(?P<dateabs>{}+)", *UNTIL_FINAL_QUOTE_PAT).quote();
+    static ref DATE_REL_META_PAT: String = format!(r"(?P<daterel>{}+)", *UNTIL_FINAL_QUOTE_PAT).quote();
     static ref HASH_META_PAT: String = String::from(r"(?P<fullhash>[a-f0-9]+)").quote();
     static ref EMAIL_META_PAT: String = format!(r"(?P<email>{}*)", *UNTIL_FINAL_QUOTE_PAT).quote();
     static ref COMMIT_LOG_RE: Regex = Regex::new(
         &format!(
-            r"^(?P<raw>(?P<hash>[a-f0-9]+)\s\-\s(\((?P<meta>[^\)]+)\)\s)?(?P<message>.+)\((?P<daterepr>[^\)]+)\)\s<(?P<author>[^>]*)>){}dateabs\:\s{},\shash\:\s{},\semail\:\s{}$",
+            r"^(?P<raw>(?P<hash>[a-f0-9]+)\s\-\s(\((?P<refs>[^\)]+)\)\s)?(?P<message>.+)\((?P<daterepr>[^\)]+)\)\s<(?P<author>[^>]*)>){}dateabs\:\s{},\sdaterel\:\s{},\shash\:\s{},\semail\:\s{}$",
             *META_SEP_CHAR,
-            *DATE_META_PAT,
+            *DATE_ABS_META_PAT,
+            *DATE_REL_META_PAT,
             *HASH_META_PAT,
             *EMAIL_META_PAT,
         ),
@@ -36,48 +37,19 @@ lazy_static! {
 }
 
 #[derive(Clone)]
-pub struct GitCommit {
-    #[allow(dead_code)]
-    hash: String,
-    #[allow(dead_code)]
-    meta: Option<String>,
-    #[allow(dead_code)]
-    message: String,
-    pub date: CommitDate,
-    pub id: GitIdentity,
-    pub raw: String,
+pub struct CommitHash {
+    full: String,
+    pub short: String,
 }
 
 #[derive(Clone)]
-pub struct CommitDate {
-    pub abs: DateTime<Local>,
-    #[allow(dead_code)]
-    repr: String,
-}
-
-pub trait HashFormat {
-    #[allow(dead_code)]
-    fn short(&self) -> String;
-}
-
-impl HashFormat for String {
-    fn short(&self) -> String {
-        // github.com/jakewilliami/mktex/blob/e5430b18/src/remote.rs#L56
-        match self.char_indices().nth(SHORT_HASH_LENGTH) {
-            None => self.to_string(),
-            Some((idx, _)) => (self[..idx]).to_string(),
-        }
-    }
-}
-
-trait Quote {
-    fn quote(&self) -> String;
-}
-
-impl Quote for String {
-    fn quote(&self) -> String {
-        format!("{}{}{}", *INITIAL_QUOTE_CHAR, &self, *FINAL_QUOTE_CHAR)
-    }
+pub struct GitCommit {
+    pub hash: CommitHash,
+    pub message: String,
+    pub refs: Vec<String>,
+    pub date: CommitDate,
+    pub id: GitIdentity,
+    pub raw: String,
 }
 
 pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit> {
@@ -95,8 +67,15 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
         let re_match = COMMIT_LOG_RE.captures(&log_stripped).unwrap();
 
         logs.push(GitCommit {
-            hash: re_match.name("fullhash").unwrap().as_str().to_string(),
-            meta: re_match.name("meta").map(|s| s.as_str().to_string()),
+            hash: CommitHash {
+                full: re_match.name("fullhash").unwrap().as_str().to_string(),
+                short: re_match.name("hash").unwrap().as_str().to_string(),
+            },
+            refs: re_match
+                .name("refs")
+                .iter()
+                .map(|s| s.as_str().to_string())
+                .collect(),
             message: re_match.name("message").unwrap().as_str().to_string(),
             date: CommitDate {
                 abs: {
@@ -117,6 +96,7 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
                     }
                 },
                 repr: re_match.name("daterepr").unwrap().as_str().to_string(),
+                rel: re_match.name("daterel").unwrap().as_str().to_string(),
             },
             id: GitIdentity {
                 email: re_match.name("email").unwrap().as_str().to_string(),
@@ -149,10 +129,11 @@ fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
     // Specify log format
     // NOTE: at the end of the main format log, we pull additional meta information for the GitCommit struct
     cmd.arg(format!(
-        "--pretty=format:\"{}{}dateabs: {}, hash: {}, email: {}\"",
+        "--pretty=format:\"{}{}dateabs: {}, daterel: {}, hash: {}, email: {}\"",
         log_fmt_str(opts),
         *META_SEP_CHAR,
         String::from("%cd").quote(),
+        String::from("%cr").quote(),
         String::from("%H").quote(),
         String::from("%ae").quote(),
     ));
