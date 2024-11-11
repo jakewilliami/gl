@@ -7,7 +7,7 @@ pub struct GitIdentity {
 }
 
 impl GitIdentity {
-    pub fn is_me(self) -> bool {
+    pub fn is_me(&self) -> bool {
         if config::ME_IDENTITY.contains(&self.email.as_str()) {
             return true;
         }

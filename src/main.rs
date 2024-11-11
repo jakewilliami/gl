@@ -10,7 +10,6 @@ mod identity;
 mod languages;
 mod log;
 mod opts;
-mod quote;
 mod repo;
 mod status;
 
