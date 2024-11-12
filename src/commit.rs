@@ -1,6 +1,8 @@
-use super::{date::CommitDate, identity::GitIdentity, opts::GitLogOptions};
+use super::{
+    date::CommitDate, identity::GitIdentity, opts::GitLogOptions, repo::discover_repository,
+};
 use gix::{bstr::ByteSlice, revision::walk::Sorting, traverse::commit::simple::CommitTimeOrder};
-use std::{collections::HashMap, path::PathBuf};
+use std::collections::HashMap;
 
 #[derive(Clone)]
 pub struct CommitHash {
@@ -23,17 +25,11 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
         &GitLogOptions::default()
     };
 
-    let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
-    let repo = gix::discover(current_dir).unwrap();
+    // TODO: we should probably give a good error message here
+    let repo = discover_repository().unwrap();
 
     // Get most recent commit at head
-    let commit = repo
-        .rev_parse_single("HEAD")
-        .unwrap()
-        .object()
-        .unwrap()
-        .try_into_commit()
-        .unwrap();
+    let commit = repo.head_commit().unwrap();
 
     // The following is a pre-computation step developed to collate a list of ref names
     // associated with each commit.  This process was discovered by following the trail
