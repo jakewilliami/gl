@@ -277,10 +277,10 @@ fn main() {
         }
     } else if cli.group.local_branches {
         // Show local branches
-        branch::get_branch_names(branch::BranchListings::Local, &opts);
+        branch::display_branches(branch::BranchListings::Local, &opts);
     } else if cli.group.remote_branches {
         // Show remote branches
-        branch::get_branch_names(branch::BranchListings::Remotes, &opts);
+        branch::display_branches(branch::BranchListings::Remotes, &opts);
     } else if cli.group.repo_name {
         // Show the current repository
         let current_repo = repo::current_repository();
