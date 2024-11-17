@@ -264,7 +264,7 @@ fn main() {
         languages::print_language_summary(top_n, language_summary, &opts);
     } else if cli.group.status.is_some() {
         // Show status of git repo
-        status::get_git_status(&cli.group.status, &opts);
+        status::display_git_status(&cli.group.status, &opts);
     // } else if cli.group.global_status {
     //     // Show statuses of predefined git repos (not yet implemented)
     //     todo!()
