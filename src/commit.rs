@@ -15,8 +15,9 @@ lazy_static! {
     static ref META_SEP_CHAR: char = char::from_u32(0x2E3A).unwrap();
 
     // Quotes for log metadata
-    static ref INITIAL_QUOTE_CHAR: char = char::from_u32(0x201C).unwrap();
-    static ref FINAL_QUOTE_CHAR: char = char::from_u32(0x201D).unwrap();
+    // These need to be unique.  They are not traditional quotes.  See  v3.0.2 and v3.1.2.
+    static ref INITIAL_QUOTE_CHAR: char = char::from_u32(0x2560).unwrap();
+    static ref FINAL_QUOTE_CHAR: char = char::from_u32(0x2563).unwrap();
 
     //Regex for commit logs
     static ref UNTIL_FINAL_QUOTE_PAT: String = format!(r"[^{}]", *FINAL_QUOTE_CHAR);
