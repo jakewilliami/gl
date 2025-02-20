@@ -1,43 +1,20 @@
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use gix::Repository;
+use std::path::PathBuf;
 
-pub fn top_level_repo_path() -> Option<String> {
-    let mut cmd = Command::new("git");
-    cmd.arg("rev-parse");
-    cmd.arg("--show-toplevel");
-    let output = cmd
-        .stdout(Stdio::piped())
-        .output()
-        .expect("Failed to execute `git rev-parse`");
+pub fn discover_repository() -> Option<Repository> {
+    let current_dir = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+    gix::discover(current_dir).ok()
+}
 
-    if output.status.success() {
-        let mut current_repo_path = String::from_utf8_lossy(&output.stdout).into_owned();
-
-        // strip the output of any new lines
-        if current_repo_path.ends_with('\n') {
-            current_repo_path.pop();
-            if current_repo_path.ends_with('\r') {
-                current_repo_path.pop();
-            }
-        }
-        Some(current_repo_path)
-    } else {
-        None
-    }
+pub fn top_level_repo_path() -> Option<PathBuf> {
+    // TODO: we should probably give a good error message here
+    let repo = discover_repository().unwrap();
+    repo.git_dir().parent().map(|path| path.to_owned())
 }
 
 pub fn current_repository() -> Option<String> {
-    let current_repo_path = top_level_repo_path();
-
-    if let Some(current_repo_path) = current_repo_path {
-        // get the basename of the path
-        let repo_path = Path::new(&current_repo_path);
-        let repo_path_basename = PathBuf::from(repo_path.file_name().unwrap());
-
-        let repo_basename_str: String = repo_path_basename.into_os_string().into_string().unwrap();
-
-        Some(repo_basename_str)
-    } else {
-        None
-    }
+    top_level_repo_path()?
+        .file_name()?
+        .to_str()
+        .map(|s| s.to_string())
 }

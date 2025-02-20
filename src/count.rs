@@ -1,14 +1,15 @@
-use super::branch::current_branch;
-use super::opts::GitLogOptions;
-use super::repo::current_repository;
+use super::{
+    branch::current_branch,
+    opts::GitLogOptions,
+    repo::{current_repository, discover_repository},
+};
 use chrono::{DateTime, Duration, Local, NaiveTime};
 use colored::*;
-use std::process::{Command, Output, Stdio};
 
-// const local: DateTime<Local> = Local::now();
-// const today = Utc.ymd(local.year(), local.month(), local.day())
-// let today: Date<Local> = Local::today();
-// const yesterday = today - Duration::days(1);
+struct TimeRange {
+    start: i64,
+    end: i64,
+}
 
 pub fn get_commit_count(input: &str, opts: &GitLogOptions) {
     // determine commit count
@@ -109,7 +110,10 @@ fn commit_count_today() -> usize {
     let now: i64 = Local::now().timestamp();
 
     // get the commit count for this period
-    commit_count_between(today_start, now)
+    commit_count_core(Some(TimeRange {
+        start: today_start,
+        end: now,
+    }))
 }
 
 fn commit_count_yesterday() -> usize {
@@ -119,11 +123,12 @@ fn commit_count_yesterday() -> usize {
     // calculate those values in seconds
     let today_timestamp: i64 = today_start.timestamp();
     let yersterday_timestamp: i64 = yesterday_start.timestamp();
-    // let date_of_interest: i64 = (since - before) as i64;
-    // let timestamp_of_interest: i64 = (today - Duration::days(date_of_interest)).timestamp();
 
     // get the commit count for this period
-    commit_count_between(yersterday_timestamp, today_timestamp)
+    commit_count_core(Some(TimeRange {
+        start: yersterday_timestamp,
+        end: today_timestamp,
+    }))
 }
 
 fn commit_count_since(n: usize) -> usize {
@@ -135,72 +140,53 @@ fn commit_count_since(n: usize) -> usize {
     let since_timestamp: i64 = since_start.timestamp();
 
     // get the commit count for this period
-    commit_count_between(since_timestamp, now)
-}
-
-fn commit_count_between(since_timestamp: i64, before_timestamp: i64) -> usize {
-    // construct git command line arguments
-    let mut since_arg = String::new();
-    since_arg.push_str("--since=");
-    since_arg.push_str(since_timestamp.to_string().as_str());
-    let mut before_arg = String::new();
-    before_arg.push_str("--before=");
-    before_arg.push_str(before_timestamp.to_string().as_str());
-
-    // git rev-list --count --since=$START_TODAY --before=$NOW HEAD
-    let since = since_arg.as_str();
-    let before = before_arg.as_str();
-    commit_count_core(vec![since, before])
+    commit_count_core(Some(TimeRange {
+        start: since_timestamp,
+        end: now,
+    }))
 }
 
 pub fn commit_count() -> usize {
-    commit_count_core(vec![])
+    commit_count_core(None)
 }
 
-fn commit_count_core(args: Vec<&str>) -> usize {
-    // run command
-    // git rev-list --count HEAD
-    let mut cmd = Command::new("git");
-    cmd.arg("rev-list");
-    cmd.arg("--count");
-    cmd.arg("--no-merges");
-    for arg in args {
-        cmd.arg(arg);
-    }
-    cmd.arg("HEAD");
+fn commit_count_core(rng: Option<TimeRange>) -> usize {
+    // TODO: we should probably give a good error message here
+    let repo = discover_repository().unwrap();
 
-    let output = cmd
-        .stdout(Stdio::piped())
-        .output()
-        .expect("Failed to execute `git rev-list`");
+    // Get most recent commit at HEAD
+    let commit = repo.head_commit().unwrap();
 
-    if let Some(output) = parse_commit_count(output) {
-        match output.parse::<usize>() {
-            Ok(n) => n,
-            Err(e) => {
-                eprintln!("[ERROR] Failed to parse {output:?} as `usize`: {e}");
-                0
+    // Count non-merge commits on HEAD
+    repo.rev_walk([commit.id])
+        .all()
+        .unwrap()
+        .filter(|info| {
+            if let Ok(info) = info {
+                // Get commit info
+                let commit = info.object().unwrap();
+                let commit_ref = commit.decode().unwrap();
+
+                // We want to filter out merges.  We can do this by filtering out
+                // the commit if it has more than one parent
+                let mut parents = commit_ref.parents();
+                parents.next();
+                if parents.next().is_some() {
+                    return false;
+                }
+
+                // Filter between the time frame
+                if let Some(rng) = &rng {
+                    let committer = commit_ref.committer();
+                    if rng.start > committer.time.seconds || committer.time.seconds > rng.end {
+                        return false;
+                    }
+                }
+
+                true
+            } else {
+                false
             }
-        }
-    } else {
-        eprintln!("[ERROR] Failed to get output from `git rev-list`");
-        0
-    }
-}
-
-fn parse_commit_count(cmd_out: Output) -> Option<String> {
-    // return appropriately (error silently)
-    if cmd_out.status.success() {
-        let mut commit_count = String::from_utf8_lossy(&cmd_out.stdout).into_owned();
-
-        if commit_count.ends_with('\n') {
-            commit_count.pop();
-            if commit_count.ends_with('\r') {
-                commit_count.pop();
-            }
-        }
-        Some(commit_count)
-    } else {
-        None
-    }
+        })
+        .fold(0, |count, _| count + 1)
 }
