@@ -7,7 +7,7 @@ A simple command line utility to wrap some common Git functions into a simple bi
 ## Quick Start
 
 ```bash
-$ ./compile.sh
+$ just
 $ ./gl -h
 ```
 
@@ -19,9 +19,15 @@ Anything you need to change to get it working for you should be in the [config f
 
 ## Where to store
 
-Once it is ready for a "release", I like to store this in `/opt/local/bin`:
-```bash
-$ ./compile.sh
+Once it is ready for a "release", I like to store this in `$HOME/opt/`:
+```commandline
+$ just
+$ mv ./gl ~/opt/
+```
+
+Alternatively, store it on the system, in `/opt/local/bin`:
+```commandline
+$ just
 $ chmod 755 ./gl
 $ mv ./gl /opt/local/bin
 ```
