@@ -242,9 +242,7 @@ fn main() {
     let cli = Cli::parse();
     let opts = opts::GitLogOptions {
         relative: !cli.absolute,
-
-        // https://no-color.org
-        colour: !(std::env::var("NO_COLOR").is_ok() || std::env::var("NO_COLOUR").is_ok()),
+        colour: env::colour(),
         reverse: cli.reverse,
         all: cli.all,
 
