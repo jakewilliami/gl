@@ -1,10 +1,11 @@
-use clap::{crate_version, ArgAction, Args, Parser};
+use clap::{ArgAction, Args, Parser, crate_version};
 
 mod branch;
 mod commit;
 mod config;
 mod contributions;
 mod count;
+mod env;
 mod identity;
 mod languages;
 mod log;
@@ -270,7 +271,7 @@ fn main() {
         // Show current branch name
         let current_branch = branch::current_branch();
         if let Some(current_branch) = current_branch {
-            println!("{}", current_branch);
+            println!("{current_branch}");
         }
     } else if cli.group.local_branches {
         // Show local branches
@@ -282,7 +283,7 @@ fn main() {
         // Show the current repository
         let current_repo = repo::current_repository();
         if let Some(current_repo) = current_repo {
-            println!("{}", current_repo);
+            println!("{current_repo}");
         }
     } else if cli.group.commit_count {
         // Show commit count

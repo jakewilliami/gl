@@ -30,11 +30,11 @@ fn git_status(dir: &OsString, opts: &GitLogOptions) -> String {
         .expect("Failed to execute `git status`");
 
     if output.status.success() {
-        let git_status = String::from_utf8_lossy(&output.stdout).into_owned();
-
-        git_status
+        String::from_utf8_lossy(&output.stdout).into_owned()
     } else {
-        println!("An error has occured.  It is likely that you aren't in a git repository, or you may not have `git` installed.");
+        println!(
+            "An error has occured.  It is likely that you aren't in a git repository, or you may not have `git` installed."
+        );
 
         "".to_string()
     }

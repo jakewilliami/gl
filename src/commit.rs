@@ -187,7 +187,7 @@ fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
     if let Some(n) = n {
         if !opts.all {
             // If n is defined, restrict the log to only show n of them (only if we don't want to show all logs)
-            cmd.arg(format!("-n {}", n));
+            cmd.arg(format!("-n {n}"));
 
             // If the number of logs is defined, but so is rev, then we want to skip some number of logs
             // Note: if --all is specified, we don't want to skip anything.  --rev will be handled upstream if needed
@@ -204,11 +204,11 @@ fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
         .expect("Failed to execute `git log`");
 
     if output.status.success() {
-        let git_log = String::from_utf8_lossy(&output.stdout).into_owned();
-
-        git_log
+        String::from_utf8_lossy(&output.stdout).into_owned()
     } else {
-        println!("An error has occured.  It is likely that you aren't in a git repository, or you may not have `git` installed.");
+        println!(
+            "An error has occured.  It is likely that you aren't in a git repository, or you may not have `git` installed."
+        );
 
         "".to_string()
     }
@@ -227,7 +227,7 @@ fn log_fmt_str(opts: &GitLogOptions) -> String {
         opts,
     );
     let author = colourise_log_fmt("an", Some("bold blue"), None, Some("<>"), opts);
-    format!("{} {} {} {} {}", commit, branch_tag, msg, time, author)
+    format!("{commit} {branch_tag} {msg} {time} {author}")
 }
 
 fn colourise_log_fmt(
@@ -241,12 +241,9 @@ fn colourise_log_fmt(
     let (enclosing_start, enclosing_end) = get_enclosing(enclosing_chars);
     if opts.colour && colour.is_some() {
         let colour = colour.unwrap();
-        format!(
-            "{}%C({}){}%{}{}%Creset",
-            prefix, colour, enclosing_start, fmt, enclosing_end
-        )
+        format!("{prefix}%C({colour}){enclosing_start}%{fmt}{enclosing_end}%Creset")
     } else {
-        format!("{}{}%{}{}", prefix, enclosing_start, fmt, enclosing_end)
+        format!("{prefix}{enclosing_start}%{fmt}{enclosing_end}")
     }
 }
 

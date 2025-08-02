@@ -1,4 +1,4 @@
-use super::commit::{git_log, GitCommit};
+use super::commit::{GitCommit, git_log};
 use super::config;
 use super::opts::GitLogOptions;
 use colored::*;

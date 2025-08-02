@@ -22,7 +22,7 @@ pub fn get_branch_names(bt: BranchListings, opts: &GitLogOptions) {
         }
 
         for b in stripped_branch_names.split_terminator('\n') {
-            println!("{}", b);
+            println!("{b}");
         }
     }
 }

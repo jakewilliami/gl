@@ -2,7 +2,7 @@ use super::opts::GitLogOptions;
 use super::repo;
 use colored::*;
 use colorsys::Rgb;
-use hyperpolyglot::{get_language_breakdown, Detection, Language};
+use hyperpolyglot::{Detection, Language, get_language_breakdown};
 use std::collections::HashMap;
 use std::convert::TryFrom;
 use std::path::PathBuf;
@@ -36,10 +36,7 @@ pub fn construct_language_summary() -> Vec<LanguageSummary> {
             let percentage = ((files.len() * 100) as f64) / total_file_count;
 
             // Get the language from the database
-            let language_struct: Option<Language> = match Language::try_from(language) {
-                Ok(lang) => Some(lang),
-                Err(_) => None,
-            };
+            let language_struct = Language::try_from(language).ok();
 
             // Get colour information for this language
             let rgb: Option<UnsignedRGB> = match language_struct {
@@ -97,7 +94,7 @@ pub fn print_language_summary(
                         language_summary.prevalence_percentage, language.name
                     )
                     .truecolor(lang_colour.r, lang_colour.g, lang_colour.b);
-                    println!("{}", language_summary_str);
+                    println!("{language_summary_str}");
                 } else {
                     println!(
                         "{:>6.2}%  {}",
