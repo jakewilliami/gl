@@ -1,4 +1,5 @@
 use chrono::{DateTime, FixedOffset, Local};
+use std::str::FromStr;
 
 #[derive(Clone)]
 pub struct CommitDate {
@@ -121,5 +122,21 @@ impl From<gix::date::Time> for CommitDate {
         // let repr = time.format(gix::date::time::format::ISO8601);
         let rel = time.to_relative();
         Self { abs, rel }
+    }
+}
+
+// Fix for something between gix v0.67 and v0.73.  Namely:
+//   github.com/GitoxideLabs/gitoxide/commit/9825354f
+//
+// Note: After turning commit time into a  &Bstr, the authors of gix then made it
+//   a &str:
+//     github.com/GitoxideLabs/gitoxide/commit/57366d3e
+//
+// Note: there is a `seconds` method on `SignatureRef` but we lose information
+//   about the committer's time offset (timezone), so we must parse time from
+//   the given string ourselves.
+impl From<&str> for CommitDate {
+    fn from(time: &str) -> Self {
+        CommitDate::from(gix::date::Time::from_str(time).unwrap())
     }
 }

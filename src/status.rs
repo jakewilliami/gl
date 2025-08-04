@@ -4,10 +4,7 @@ use gix::{
     Repository,
     dir::entry::Status,
     remote::Direction,
-    status::{
-        index_worktree::iter::Item::{self as StatusItem},
-        plumbing::index_as_worktree::EntryStatus,
-    },
+    status::{index_worktree::Item as StatusItem, plumbing::index_as_worktree::EntryStatus},
     submodule::Status as SubmoduleStatus,
 };
 use std::{cmp::Ordering, ffi::OsString, path::PathBuf};

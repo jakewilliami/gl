@@ -11,7 +11,7 @@ chrono = "0.4.38"
 clap = { version = "4.5.20", features = ["cargo", "wrap_help", "derive"] }
 colored = "2.1.0"
 colorsys = "0.6.7"
-gix = { version = "0.67.0", features = ["revision", "status", "dirwalk"] }
+gix = { version = "0.73.0", features = ["revision", "status", "dirwalk"] }
 hyperpolyglot = "0.1.7"
 json = "0.12.4"
 lazy_static = "1.5.0"

@@ -5,6 +5,7 @@ use super::{
 };
 use chrono::{DateTime, Duration, Local, NaiveTime};
 use colored::*;
+use std::str::FromStr;
 
 struct TimeRange {
     start: i64,
@@ -178,7 +179,8 @@ fn commit_count_core(rng: Option<TimeRange>) -> usize {
                 // Filter between the time frame
                 if let Some(rng) = &rng {
                     let committer = commit_ref.committer();
-                    if rng.start > committer.time.seconds || committer.time.seconds > rng.end {
+                    let time = gix::date::Time::from_str(committer.time).unwrap();
+                    if rng.start > time.seconds || time.seconds > rng.end {
                         return false;
                     }
                 }
