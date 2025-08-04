@@ -1,15 +1,12 @@
-use super::config::SHORT_HASH_LENGTH;
-use super::count;
-use super::identity::GitIdentity;
-use super::opts::GitLogOptions;
-use chrono::{DateTime, Local, NaiveDate};
+use super::{
+    date::CommitDate, identity::GitIdentity, opts::GitLogOptions, repo::discover_repository,
+};
+use gix::revision::walk::Info as CommitInfo;
+use gix::{bstr::ByteSlice, revision::walk::Sorting, traverse::commit::simple::CommitTimeOrder};
 use lazy_static::lazy_static;
 use regex::Regex;
-use std::{
-    char,
-    process::{Command, Stdio},
-    sync::Arc,
-};
+use std::char;
+use std::collections::HashMap;
 
 lazy_static! {
     // This is a good separating dash, but relies on it not being used inside commit messages!
@@ -37,41 +34,6 @@ lazy_static! {
         .unwrap();
 }
 
-#[derive(Clone)]
-pub struct GitCommit {
-    #[allow(dead_code)]
-    pub hash: String,
-    #[allow(dead_code)]
-    meta: Option<String>,
-    #[allow(dead_code)]
-    message: String,
-    pub date: CommitDate,
-    pub id: GitIdentity,
-    pub raw: String,
-}
-
-#[derive(Clone)]
-pub struct CommitDate {
-    pub abs: DateTime<Local>,
-    #[allow(dead_code)]
-    repr: String,
-}
-
-pub trait HashFormat {
-    #[allow(dead_code)]
-    fn short(&self) -> String;
-}
-
-impl HashFormat for String {
-    fn short(&self) -> String {
-        // github.com/jakewilliami/mktex/blob/e5430b18/src/remote.rs#L56
-        match self.char_indices().nth(SHORT_HASH_LENGTH) {
-            None => self.to_string(),
-            Some((idx, _)) => (self[..idx]).to_string(),
-        }
-    }
-}
-
 trait Quote {
     fn quote(&self) -> String;
 }
@@ -82,7 +44,191 @@ impl Quote for String {
     }
 }
 
-pub struct GitLogIter {
+#[derive(Clone)]
+pub struct GitCommit {
+    pub hash: String,
+    pub message: String,
+    pub refs: Vec<String>,
+    pub date: CommitDate,
+    pub id: GitIdentity,
+}
+
+impl GitCommit {
+    fn from_info(
+        info: CommitInfo,
+        opts: &GitLogOptions,
+        refs: &HashMap<String, Vec<String>>,
+    ) -> Option<Self> {
+        // let message = info.message.ok_or("Missing commit message")?;
+
+        // Ok(GitCommit {
+        // id: info.id.to_string(),
+        // message: message.to_string(),
+        // })
+        // "not implemented"
+        // Err("not implemented".into())
+
+        // Get commit info
+        let commit = info.object().unwrap();
+        let commit_ref = commit.decode().unwrap();
+
+        // We want to filter out merges.  We can do this by filtering out
+        // the commit if it has more than one parent
+        let mut parents = commit_ref.parents();
+        parents.next();
+        if parents.next().is_some() {
+            return None;
+        }
+
+        // Get author info
+        // TODO: allow GitIdentity by author rather than committer
+        let author = commit_ref.author.actor();
+        let committer = commit_ref.committer();
+
+        if commit.short_id().unwrap().to_string() == *"8d38e3e" {
+            dbg!(&commit);
+            dbg!(&commit_ref);
+        }
+
+        // Filter for author
+        // TODO: why is this so slow?  Without this match, the change since v3.1.0 is
+        //   ∼1.8 × faster, but with this filter it is ∼2.6 × slower
+        if !opts.authors.is_empty() {
+            // NOTE: we intentionally currently filter on committer (to match
+            // `git`'s `--author` behaviour)---just the specified author,
+            // even though that can be contrived.
+            let author_identities = [author.email, author.name];
+
+            let is_author_match = opts.authors.iter().any(|author| {
+                author_identities
+                    .iter()
+                    .any(|possible_author| possible_author.contains_str(author))
+            });
+
+            if !is_author_match {
+                return None;
+            }
+        }
+
+        // Filter for needles in commit messages
+        // TODO: this is also ∼2.8 × slower than the git equivalent, `--author`.  Why?
+        // TODO: this also matches on non-titular text!  Is this intentional?
+        if !opts.needles.is_empty() {
+            let is_needle_match = opts
+                .needles
+                .iter()
+                .all(|needle| commit_ref.message.contains_str(needle));
+
+            if !is_needle_match {
+                return None;
+            }
+        }
+
+        Some(GitCommit {
+            hash: commit.id().to_hex().to_string(),
+            refs: refs
+                .get(&commit.id().to_hex().to_string())
+                .unwrap_or(&vec![])
+                .to_vec(),
+            message: commit_ref.message().title.to_str_lossy().into_owned(),
+            date: CommitDate::from(committer.time),
+            id: GitIdentity {
+                email: author.email.to_str_lossy().into_owned(),
+                names: vec![author.name.to_str_lossy().into_owned()],
+            },
+        })
+    }
+}
+
+// TODO: temporary function; should use iterator
+//   See: github.com/jakewilliami/gl/commit/44df7970
+pub fn git_log_iter(
+    n: Option<usize>,
+    opts: Option<&GitLogOptions>,
+) -> Box<dyn Iterator<Item = GitCommit>> {
+    Box::new(git_log(n, opts).into_iter())
+}
+
+pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit> {
+    let opts = if let Some(opts) = opts {
+        opts
+    } else {
+        &GitLogOptions::default()
+    };
+
+    // TODO: we should probably give a good error message here
+    let repo = discover_repository().unwrap();
+
+    // Get most recent commit at head
+    let commit = repo.head_commit().unwrap();
+
+    // The following is a pre-computation step developed to collate a list of ref names
+    // associated with each commit.  This process was discovered by following the trail
+    // from `gix`'s `describe` functionality:
+    //   https://github.com/GitoxideLabs/gitoxide/blob/ccd6525c/gitoxide-core/src/repository/commit.rs#L59-L78
+    //
+    // Namely, I adapted the following:
+    //   https://github.com/GitoxideLabs/gitoxide/blob/ccd6525c/gix/src/commit.rs#L108-L145
+    //
+    // This was previously computed and formatted directly within `git`:
+    //   https://github.com/jakewilliami/gl/blob/v3.1.1/src/commit.rs#L144-L198
+    //
+    // Still TODO: iterate over commits from HEAD, rather than all commits; and consider
+    //   attempting to clean up ref names?  Prefix with `tag:`; `HEAD ->` where applicable;
+    //   shorten or not; sort them properly; check target ID; etc.
+    let platform = repo.references().unwrap();
+    let mut refs = HashMap::<String, Vec<String>>::new();
+    for r in platform.all().unwrap().filter_map(Result::ok) {
+        // let target_id = r.clone().target().try_id().map(ToOwned::to_owned);
+        let peeled_id = r.clone().peel_to_id_in_place().ok().unwrap();
+        refs.entry(peeled_id.to_hex().to_string())
+            .or_default()
+            .push(r.inner.name.shorten().to_string());
+    }
+
+    // Create an iterator over relevant commits, to use downstream (e.g., for logging
+    // or contribution statistics).  This was developed (alongside wading through the
+    // `gix` crate documentation) partly based on the following example:
+    //   https://github.com/GitoxideLabs/gitoxide/blob/ccd6525c/examples/log.rs#L94-L157
+    let log_iter: Box<dyn Iterator<Item = GitCommit>> = Box::new(
+        repo.rev_walk([commit.id])
+            .sorting(Sorting::ByCommitTime(CommitTimeOrder::NewestFirst))
+            .all()
+            .unwrap()
+            .filter_map(Result::ok)
+            .filter_map(|info| GitCommit::from_info(info, opts, &refs)),
+    );
+
+    let mut logs: Vec<GitCommit> = log_iter.collect();
+
+    // TODO: It would be ideal to get this working without collecting the logs first.
+    // `gix` should be able to handle sorting in a different order.  I have requested
+    // community help with this:
+    //   https://github.com/GitoxideLabs/gitoxide/discussions/1669
+    //
+    // The ideal sorting algorithm is as follows:
+    //   .sorting(Sorting::ByCommitTime(if !opts.reverse {
+    //       CommitTimeOrder::NewestFirst
+    //   } else {
+    //       CommitTimeOrder::OldestFirst
+    //   }))
+    //
+    // Hopefully I can get this working soon, as collecting and turning it back into
+    // an iterator after reversing seems quite inefficient.
+    if opts.reverse {
+        logs.reverse()
+    }
+
+    if let Some(n) = n {
+        if !opts.all {
+            logs = logs.into_iter().take(n).collect();
+        }
+    }
+
+    logs
+}
+
+/*pub struct GitLogIter {
     #[allow(dead_code)]
     log_data: Arc<String>,
     lines: std::str::Lines<'static>,
@@ -168,121 +314,4 @@ pub fn git_log_iter(
 
 pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit> {
     git_log_iter(n, opts).collect()
-}
-
-fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
-    let mut cmd = Command::new("git");
-    cmd.arg("log");
-    cmd.arg("--color");
-    cmd.arg("--no-merges");
-
-    // Specify log format
-    // NOTE: at the end of the main format log, we pull additional meta information for the GitCommit struct
-    cmd.arg(format!(
-        "--pretty=format:\"{}{}dateabs: {}, hash: {}, email: {}\"",
-        log_fmt_str(opts),
-        *META_SEP_CHAR,
-        String::from("%cd").quote(),
-        String::from("%H").quote(),
-        String::from("%ae").quote(),
-    ));
-
-    if opts.relative {
-        // Even though we don't explicitly print the full date when we show the relative commit time, it is useful to have the RFC-2822 date format for parsing in the GitCommit
-        cmd.arg("--date=rfc");
-    } else {
-        cmd.arg("--date=format:\"%a %d %b %Y\"");
-    }
-
-    // Apply log filters
-    //
-    // Could try with regex:
-    //   https://forums.freebsd.org/threads/58555/
-    //   https://stackoverflow.com/a/22971024/
-    //
-    // But it seems to work fine with multiple arguments
-    for author in &opts.authors {
-        // cmd.arg(format!("--author=\"{author}\""));
-        cmd.arg("--author").arg(author);
-    }
-
-    for needle in &opts.needles {
-        // cmd.arg(format!("--grep=\"{needle}\""));
-        cmd.arg("--grep").arg(needle);
-    }
-
-    cmd.arg("--abbrev-commit");
-
-    if let Some(n) = n {
-        if !opts.all {
-            // If n is defined, restrict the log to only show n of them (only if we don't want to show all logs)
-            cmd.arg(format!("-n {n}"));
-
-            // If the number of logs is defined, but so is rev, then we want to skip some number of logs
-            // Note: if --all is specified, we don't want to skip anything.  --rev will be handled upstream if needed
-            if opts.reverse {
-                let log_count = count::commit_count();
-                cmd.arg(format!("--skip={}", log_count - n));
-            }
-        }
-    }
-
-    let output = cmd
-        .stdout(Stdio::piped())
-        .output()
-        .expect("Failed to execute `git log`");
-
-    if output.status.success() {
-        String::from_utf8_lossy(&output.stdout).into_owned()
-    } else {
-        println!(
-            "An error has occured.  It is likely that you aren't in a git repository, or you may not have `git` installed."
-        );
-
-        "".to_string()
-    }
-}
-
-fn log_fmt_str(opts: &GitLogOptions) -> String {
-    // TODO: add option for commit format H (long hash)
-    let commit = colourise_log_fmt("h", Some("bold yellow"), None, None, opts);
-    let branch_tag = colourise_log_fmt("d", Some("bold green"), Some("-"), None, opts);
-    let msg = colourise_log_fmt("s", None, None, Some(""), opts);
-    let time = colourise_log_fmt(
-        if opts.relative { "cr" } else { "cd" },
-        Some("bold red"),
-        None,
-        Some("()"),
-        opts,
-    );
-    let author = colourise_log_fmt("an", Some("bold blue"), None, Some("<>"), opts);
-    format!("{commit} {branch_tag} {msg} {time} {author}")
-}
-
-fn colourise_log_fmt(
-    fmt: &str,
-    colour: Option<&str>,
-    prefix: Option<&str>,
-    enclosing_chars: Option<&str>,
-    opts: &GitLogOptions,
-) -> String {
-    let prefix = prefix.unwrap_or("");
-    let (enclosing_start, enclosing_end) = get_enclosing(enclosing_chars);
-    if opts.colour && colour.is_some() {
-        let colour = colour.unwrap();
-        format!("{prefix}%C({colour}){enclosing_start}%{fmt}{enclosing_end}%Creset")
-    } else {
-        format!("{prefix}{enclosing_start}%{fmt}{enclosing_end}")
-    }
-}
-
-fn get_enclosing(enclosing_chars: Option<&str>) -> (&str, &str) {
-    let enclosing_chars = enclosing_chars.unwrap_or("");
-    if enclosing_chars.is_empty() {
-        ("", "")
-    } else {
-        let i = enclosing_chars.len() / 2 + enclosing_chars.len() % 2;
-        let (enclosing_start, enclosing_end) = enclosing_chars.split_at(i);
-        (enclosing_start, enclosing_end)
-    }
-}
+}*/

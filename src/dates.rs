@@ -1,4 +1,5 @@
-use super::commit::{GitCommit, HashFormat, git_log_iter};
+use super::commit::{GitCommit, git_log_iter};
+use super::hash::HashFormat;
 use super::opts::GitLogOptions;
 use chrono::NaiveDate;
 
