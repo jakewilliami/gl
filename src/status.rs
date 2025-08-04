@@ -1,6 +1,7 @@
 use super::{opts::GitLogOptions, repo::discover_repository};
 use colored::*;
 use gix::{
+    Repository,
     dir::entry::Status,
     remote::Direction,
     status::{
@@ -8,7 +9,6 @@ use gix::{
         plumbing::index_as_worktree::EntryStatus,
     },
     submodule::Status as SubmoduleStatus,
-    Repository,
 };
 use std::{cmp::Ordering, ffi::OsString, path::PathBuf};
 
@@ -84,7 +84,7 @@ impl Ord for GitChange {
         self.priority()
             .cmp(&other.priority())
             .then_with(|| self.status_key().cmp(&other.status_key()))
-            .then_with(|| self.path().cmp(&other.path()))
+            .then_with(|| self.path().cmp(other.path()))
     }
 }
 
@@ -182,7 +182,7 @@ pub fn display_git_status(dir: &Option<String>, opts: &GitLogOptions) {
 
     let repo = discover_repository().unwrap();
     if let Some(header) = branch_header(&repo) {
-        println!("{}", header);
+        println!("{header}");
     }
 
     let mut changes = git_status(&repo, &given_dir.into_os_string(), opts);
@@ -220,9 +220,10 @@ fn branch_header(repo: &Repository) -> Option<String> {
     }
 }
 
-fn git_status(repo: &Repository, dir: &OsString, opts: &GitLogOptions) -> Vec<GitChange> {
+fn git_status(repo: &Repository, _dir: &OsString, _opts: &GitLogOptions) -> Vec<GitChange> {
     // TODO: report on current branch vs remote (push) branch
     // TODO: Handle in-rebase or merge things (InProgress)?
+    // TODO: handle status
     let stat = repo.status(gix::progress::Discard);
 
     // In comparing the current index to the worktree status, we compare files stages for commit (index) and changes made but not yet staged (worktree), which effectively shows the changes to the status.  Comparing head to index is not yet implemented, meaning newly added files staged for commit are not here:

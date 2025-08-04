@@ -1,4 +1,5 @@
-use super::commit::{git_log, GitCommit};
+use super::commit::{GitCommit, git_log};
+use super::hash::HashFormat;
 use super::opts::GitLogOptions;
 use colored::*;
 use lazy_static::lazy_static;
@@ -19,7 +20,7 @@ impl Format for GitCommit {
         let mut parts = HashMap::new();
 
         // 1. Hash
-        parts.insert("hash", self.hash.short.clone());
+        parts.insert("hash", self.hash.short());
 
         // 2. (Optional) ref name(s)
         parts.insert("refnames", {
@@ -58,7 +59,7 @@ impl Format for GitCommit {
         parts.insert("identity", {
             let mut id = String::new();
             if let Some(auth) = self.id.names.first() {
-                id.push_str(&format!("<{}>", auth));
+                id.push_str(&format!("<{auth}>"));
             }
             id
         });

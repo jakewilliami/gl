@@ -1,11 +1,15 @@
-use clap::{crate_version, ArgAction, Args, Parser};
+use chrono::NaiveDate;
+use clap::{ArgAction, Args, Parser, crate_version};
 
 mod branch;
 mod commit;
 mod config;
 mod contributions;
 mod count;
-mod date;
+mod date; // TODO: do we want to merge these files?
+mod dates;
+mod env;
+mod hash;
 mod identity;
 mod languages;
 mod log;
@@ -237,15 +241,26 @@ pub struct Group {
         default_value_t = false,
     )]
     count: bool,
+
+    /// Find commit ref at date
+    ///
+    /// Given a date, will search through the repository to find the commit ref at that date.
+    #[arg(
+        short = 'd',
+        long = "date",
+        action = ArgAction::Set,
+        num_args = 1,
+        value_name = "date (yyyy-mm-dd)",
+        value_parser = dates::parse_date,
+    )]
+    date: Option<NaiveDate>,
 }
 
 fn main() {
     let cli = Cli::parse();
     let opts = opts::GitLogOptions {
         relative: !cli.absolute,
-
-        // https://no-color.org
-        colour: !(std::env::var("NO_COLOR").is_ok() || std::env::var("NO_COLOUR").is_ok()),
+        colour: env::colour(),
         reverse: cli.reverse,
         all: cli.all,
 
@@ -273,7 +288,7 @@ fn main() {
         // Show current branch name
         let current_branch = branch::current_branch();
         if let Some(current_branch) = current_branch {
-            println!("{}", current_branch);
+            println!("{current_branch}");
         }
     } else if cli.group.local_branches {
         // Show local branches
@@ -285,7 +300,7 @@ fn main() {
         // Show the current repository
         let current_repo = repo::current_repository();
         if let Some(current_repo) = current_repo {
-            println!("{}", current_repo);
+            println!("{current_repo}");
         }
     } else if cli.group.commit_count {
         // Show commit count
@@ -315,6 +330,8 @@ fn main() {
             // Show contributions graph
             contributions::display_git_contributions_graph(contributors.clone());
         }
+    } else if let Some(date) = cli.group.date {
+        dates::find_first_commit_before_date(date);
     } else {
         log::display_git_log(cli.group.log_number, &opts);
     }

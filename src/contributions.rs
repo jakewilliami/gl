@@ -1,11 +1,11 @@
-use super::commit::{git_log, GitCommit};
+use super::commit::{GitCommit, git_log};
 use super::identity::GitIdentity;
 use chrono::{Duration, Local, NaiveDate};
 use regex::Regex;
 use std::cmp::max;
 use std::collections::HashMap;
 use std::process::{Command, Stdio};
-use tabular::{row, Table};
+use tabular::{Table, row};
 use textplots::{
     Chart, ColorPlot, LabelBuilder, LabelFormat, Shape, TickDisplay, TickDisplayBuilder,
 };
@@ -120,7 +120,7 @@ pub fn display_git_contributions_per_author(contributors: Vec<GitContributor>) {
             contrib_summary.file_contributions.lines_written,
         ));
     }
-    println!("{}", table);
+    println!("{table}");
 }
 
 pub fn display_git_author_frequency(contributors: Vec<GitContributor>) {
@@ -142,7 +142,7 @@ pub fn display_git_author_frequency(contributors: Vec<GitContributor>) {
         ));
     }
 
-    println!("{}", table);
+    println!("{table}");
 }
 
 pub fn display_git_contributions_graph(contributors: Vec<GitContributor>) {
@@ -357,16 +357,22 @@ fn git_author_frequency() -> HashMap<String, (GitIdentity, usize)> {
                         author_contribution_frequency.insert(email, (identity, freq));
                     }
                 } else {
-                    println!("WARN: Unable to parse git frequency line \"{}\": no matching captures for regex \"{:?}\"", line, author_contribution_freq_re);
+                    println!(
+                        "WARN: Unable to parse git frequency line \"{line}\": no matching captures for regex \"{author_contribution_freq_re:?}\""
+                    );
                 }
             } else {
-                println!("WARN: Unable to parse git frequency line \"{}\": no matching captures for regex \"{:?}\"", line, author_contribution_freq_re);
+                println!(
+                    "WARN: Unable to parse git frequency line \"{line}\": no matching captures for regex \"{author_contribution_freq_re:?}\""
+                );
             }
         }
 
         author_contribution_frequency
     } else {
-        println!("An error has occured.  It is likely that you aren't in a git repository, or you may not have `git` installed.");
+        println!(
+            "An error has occured.  It is likely that you aren't in a git repository, or you may not have `git` installed."
+        );
 
         HashMap::new()
     }

@@ -6,8 +6,8 @@ A simple command line utility to wrap some common Git functions into a simple bi
 
 ## Quick Start
 
-```bash
-$ ./compile.sh
+```shell
+$ just
 $ ./gl -h
 ```
 
@@ -17,9 +17,15 @@ This tool is very much made for myself.  However, I have tried to keep things as
 
 ## Where to store
 
-Once it is ready for a "release", I like to store this in `/opt/local/bin`:
-```bash
-$ ./compile.sh
+Once it is ready for a "release", I like to store this in `$HOME/opt/`:
+```shell
+$ just
+$ mv ./gl ~/opt/
+```
+
+Alternatively, store it on the system, in `/opt/local/bin`:
+```shell
+$ just
 $ chmod 755 ./gl
 $ mv ./gl /opt/local/bin
 ```
@@ -28,12 +34,12 @@ $ mv ./gl /opt/local/bin
 
 After reading [this](https://nnethercote.github.io/perf-book/profiling.html) (note to follow the build instructions there to maximise ), I was looking into [`flamegraph`](https://github.com/flamegraph-rs/flamegraph).  I was having issues with DTrace and system integrity protection using `flamegraph`, but the authors of `flamegraph` recommend [`samply`](https://github.com/mstange/samply) for macOS, which integrates well with [Firefox Profiler](https://profiler.firefox.com/).  It's easy to install:
 
-```bash
+```shell
 $ cargo install --locked samply
 ```
 
 And works really well:
-```bash
+```shell
 $ RUSTFLAGS="-C symbol-mangling-version=v0" cargo build  # Do not specify --release; we want all debug information
 ...
 

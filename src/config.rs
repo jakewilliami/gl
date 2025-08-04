@@ -10,3 +10,6 @@ pub const ME_IDENTITY: [&str; 5] = [
 
 // Top n results
 pub const DEFAULT_TOP_N_LOG: usize = 10;
+
+// Misc
+pub const SHORT_HASH_LENGTH: usize = 7;

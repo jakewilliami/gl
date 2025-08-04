@@ -20,9 +20,9 @@ pub fn get_commit_count(input: &str, opts: &GitLogOptions) {
     } else if input == "yesterday" {
         commit_count_val = commit_count_yesterday();
     } else {
-        let days_ago: usize = input.parse().unwrap_or_else(|e| {
-            panic!("{e}: argument must be a valid integer, but got {:?}", input)
-        });
+        let days_ago: usize = input
+            .parse()
+            .unwrap_or_else(|e| panic!("{e}: argument must be a valid integer, but got {input:?}"));
         commit_count_val = commit_count_since(days_ago);
     }
     // let commit_count_val = commit_count(days_ago, days_ago_end);
@@ -38,7 +38,7 @@ pub fn get_commit_count(input: &str, opts: &GitLogOptions) {
     };
     let when = match input {
         "today" | "yesterday" => String::from(input),
-        _ => format!("in the past {} days", input),
+        _ => format!("in the past {input} days"),
     };
     let verb_tense = match input {
         "yesterday" => "were",
@@ -66,7 +66,7 @@ pub fn get_commit_count(input: &str, opts: &GitLogOptions) {
     if opts.colour {
         println!("{}", out_message.green().bold());
     } else {
-        println!("{}", out_message);
+        println!("{out_message}");
     }
 }
 
@@ -100,7 +100,7 @@ pub fn get_commit_count_total(opts: &GitLogOptions) {
     if opts.colour {
         println!("{}", out_message.green().bold());
     } else {
-        println!("{}", out_message);
+        println!("{out_message}");
     }
 }
 

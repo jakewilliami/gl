@@ -50,9 +50,9 @@ impl ToRelative for gix::date::Time {
     fn to_relative(&self) -> String {
         fn time_ago(diff: i64, unit: &str) -> String {
             if diff == 1 {
-                format!("{} {} ago", diff, unit)
+                format!("{diff} {unit} ago")
             } else {
-                format!("{} {}s ago", diff, unit)
+                format!("{diff} {unit}s ago")
             }
         }
 

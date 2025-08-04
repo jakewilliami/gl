@@ -2,20 +2,62 @@ use super::{
     date::CommitDate, identity::GitIdentity, opts::GitLogOptions, repo::discover_repository,
 };
 use gix::{bstr::ByteSlice, revision::walk::Sorting, traverse::commit::simple::CommitTimeOrder};
+use lazy_static::lazy_static;
+use regex::Regex;
+use std::char;
 use std::collections::HashMap;
 
-#[derive(Clone)]
-pub struct CommitHash {
-    pub short: String,
+lazy_static! {
+    // This is a good separating dash, but relies on it not being used inside commit messages!
+    static ref META_SEP_CHAR: char = char::from_u32(0x2E3A).unwrap();
+
+    // Quotes for log metadata
+    // These need to be unique.  They are not traditional quotes.  See  v3.0.2 and v3.1.2.
+    static ref INITIAL_QUOTE_CHAR: char = char::from_u32(0x2560).unwrap();
+    static ref FINAL_QUOTE_CHAR: char = char::from_u32(0x2563).unwrap();
+
+    //Regex for commit logs
+    static ref UNTIL_FINAL_QUOTE_PAT: String = format!(r"[^{}]", *FINAL_QUOTE_CHAR);
+    static ref DATE_META_PAT: String = format!(r"(?P<dateabs>{}+)", *UNTIL_FINAL_QUOTE_PAT).quote();
+    static ref HASH_META_PAT: String = String::from(r"(?P<fullhash>[a-f0-9]+)").quote();
+    static ref EMAIL_META_PAT: String = format!(r"(?P<email>{}*)", *UNTIL_FINAL_QUOTE_PAT).quote();
+    static ref COMMIT_LOG_RE: Regex = Regex::new(
+        &format!(
+            r"^(?P<raw>(?P<hash>[a-f0-9]+)\s\-\s(\((?P<meta>[^\)]+)\)\s)?(?P<message>.+)\((?P<daterepr>[^\)]+)\)\s<(?P<author>[^>]*)>){}dateabs\:\s{},\shash\:\s{},\semail\:\s{}$",
+            *META_SEP_CHAR,
+            *DATE_META_PAT,
+            *HASH_META_PAT,
+            *EMAIL_META_PAT,
+        ),
+    )
+        .unwrap();
 }
 
 #[derive(Clone)]
 pub struct GitCommit {
-    pub hash: CommitHash,
+    pub hash: String,
     pub message: String,
     pub refs: Vec<String>,
     pub date: CommitDate,
     pub id: GitIdentity,
+}
+
+trait Quote {
+    fn quote(&self) -> String;
+}
+
+impl Quote for String {
+    fn quote(&self) -> String {
+        format!("{}{}{}", *INITIAL_QUOTE_CHAR, &self, *FINAL_QUOTE_CHAR)
+    }
+}
+
+// TODO: temporary function; should use iterator (see https://github.com/jakewilliami/gl/commit/44df7970eda30677b1199903a09a660f6367c1bd)
+pub fn git_log_iter(
+    n: Option<usize>,
+    opts: Option<&GitLogOptions>,
+) -> Box<dyn Iterator<Item = GitCommit>> {
+    Box::new(git_log(n, opts).into_iter())
 }
 
 pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit> {
@@ -120,10 +162,7 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
                     }
 
                     Some(GitCommit {
-                        hash: CommitHash {
-                            // full: commit.id().to_hex().to_string(),
-                            short: commit.short_id().unwrap().to_string(),
-                        },
+                        hash: commit.id().to_hex().to_string(),
                         refs: refs
                             .get(&commit.id().to_hex().to_string())
                             .unwrap_or(&vec![])
@@ -169,3 +208,91 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
 
     logs
 }
+
+/*pub struct GitLogIter {
+    #[allow(dead_code)]
+    log_data: Arc<String>,
+    lines: std::str::Lines<'static>,
+    opts: GitLogOptions,
+}
+
+impl Iterator for GitLogIter {
+    type Item = GitCommit;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        for log in self.lines.by_ref() {
+            let log: String = log.replace('\"', "");
+            let log_stripped = strip_ansi_escapes::strip_str(&log);
+            if let Some(re_match) = COMMIT_LOG_RE.captures(&log_stripped) {
+                return Some(GitCommit {
+                    hash: re_match.name("fullhash")?.as_str().to_string(),
+                    meta: re_match.name("meta").map(|s| s.as_str().to_string()),
+                    message: re_match.name("message")?.as_str().to_string(),
+                    date: CommitDate {
+                        abs: {
+                            let date_str = re_match.name("dateabs")?.as_str();
+                            if self.opts.relative {
+                                DateTime::parse_from_rfc2822(date_str).unwrap().into()
+                            } else {
+                                // TODO: this is slightly wrong, as it doesn't account for
+                                //   the time zone of the commit, it just uses the local
+                                //   timezone.  We need to extract the commit time zone from
+                                //   the git log command
+                                let now = Local::now();
+                                let offset = now.offset();
+                                NaiveDate::parse_from_str(date_str, "%a %d %b %Y")
+                                    .unwrap()
+                                    .and_hms_opt(0, 0, 0)
+                                    .unwrap()
+                                    .and_local_timezone(*offset)
+                                    .unwrap()
+                                    .into()
+                            }
+                        },
+                        repr: re_match.name("daterepr")?.as_str().to_string(),
+                    },
+                    id: GitIdentity {
+                        email: re_match.name("email")?.as_str().to_string(),
+                        names: vec![re_match.name("author")?.as_str().to_string()],
+                    },
+                    raw: log
+                        .split(&META_SEP_CHAR.to_string())
+                        .next()
+                        .unwrap_or("")
+                        .trim()
+                        .to_string(),
+                });
+            }
+        }
+        None
+    }
+}
+
+pub fn git_log_iter(
+    n: Option<usize>,
+    opts: Option<&GitLogOptions>,
+) -> Box<dyn Iterator<Item = GitCommit>> {
+    let opts = opts.cloned().unwrap_or_default();
+    let log_data = Arc::new(git_log_str(n, &opts));
+
+    // SAFETY: we coerce the lifetime of the `&str` to `'static` because `log_data`
+    // is held by the iterator.  This is safe because `lines` doesn't outlive `log_data`.
+    let static_ref: &'static str =
+        unsafe { std::mem::transmute::<&str, &'static str>(log_data.as_str()) };
+
+    let iter = GitLogIter {
+        lines: static_ref.lines(),
+        log_data,
+        opts: opts.clone(),
+    };
+
+    if opts.reverse {
+        Box::new(iter.collect::<Vec<_>>().into_iter().rev())
+    } else {
+        Box::new(iter)
+    }
+}
+
+pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit> {
+    git_log_iter(n, opts).collect()
+}*/

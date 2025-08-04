@@ -1,8 +1,8 @@
 [package]
 name = "gl"
-version = "3.1.1"
+version = "3.2.0"
 authors = ["Jake W. Ireland <jakewilliami@icloud.com>"]
-edition = "2018"
+edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
