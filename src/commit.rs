@@ -8,6 +8,7 @@ use regex::Regex;
 use std::{
     char,
     process::{Command, Stdio},
+    sync::Arc,
 };
 
 lazy_static! {
@@ -81,64 +82,91 @@ impl Quote for String {
     }
 }
 
-pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit> {
-    let opts = if let Some(opts) = opts {
-        opts.clone()
-    } else {
-        GitLogOptions::default()
+pub struct GitLogIter {
+    log_data: Arc<String>,
+    lines: std::str::Lines<'static>,
+    opts: GitLogOptions,
+}
+
+impl Iterator for GitLogIter {
+    type Item = GitCommit;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        while let Some(log) = self.lines.next() {
+            let log: String = log.replace('\"', "");
+            let log_stripped = strip_ansi_escapes::strip_str(&log);
+            if let Some(re_match) = COMMIT_LOG_RE.captures(&log_stripped) {
+                return Some(GitCommit {
+                    hash: re_match.name("fullhash")?.as_str().to_string(),
+                    meta: re_match.name("meta").map(|s| s.as_str().to_string()),
+                    message: re_match.name("message")?.as_str().to_string(),
+                    date: CommitDate {
+                        abs: {
+                            let date_str = re_match.name("dateabs")?.as_str();
+                            if self.opts.relative {
+                                DateTime::parse_from_rfc2822(date_str).unwrap().into()
+                            } else {
+                                // TODO: this is slightly wrong, as it doesn't account for
+                                //   the time zone of the commit, it just uses the local
+                                //   timezone.  We need to extract the commit time zone from
+                                //   the git log command
+                                let now = Local::now();
+                                let offset = now.offset();
+                                NaiveDate::parse_from_str(date_str, "%a %d %b %Y")
+                                    .unwrap()
+                                    .and_hms_opt(0, 0, 0)
+                                    .unwrap()
+                                    .and_local_timezone(*offset)
+                                    .unwrap()
+                                    .into()
+                            }
+                        },
+                        repr: re_match.name("daterepr")?.as_str().to_string(),
+                    },
+                    id: GitIdentity {
+                        email: re_match.name("email")?.as_str().to_string(),
+                        names: vec![re_match.name("author")?.as_str().to_string()],
+                    },
+                    raw: log
+                        .split(&META_SEP_CHAR.to_string())
+                        .next()
+                        .unwrap_or("")
+                        .trim()
+                        .to_string(),
+                });
+            }
+        }
+        None
+    }
+}
+
+pub fn git_log_iter(
+    n: Option<usize>,
+    opts: Option<&GitLogOptions>,
+) -> Box<dyn Iterator<Item = GitCommit>> {
+    let opts = opts.cloned().unwrap_or_default();
+    let log_data = Arc::new(git_log_str(n, &opts));
+
+    // SAFETY: we coerce the lifetime of the `&str` to `'static` because `log_data`
+    // is held by the iterator.  This is safe because `lines` doesn't outlive `log_data`.
+    let static_ref: &'static str =
+        unsafe { std::mem::transmute::<&str, &'static str>(log_data.as_str()) };
+
+    let iter = GitLogIter {
+        lines: static_ref.lines(),
+        log_data,
+        opts: opts.clone(),
     };
 
-    let mut logs: Vec<GitCommit> = Vec::new();
-    let logs_str = git_log_str(n, &opts);
-    for log in logs_str.split_terminator('\n') {
-        let log: String = log.replace('\"', "");
-        let log_stripped = strip_ansi_escapes::strip_str(&log);
-        let re_match = COMMIT_LOG_RE.captures(&log_stripped).unwrap();
-
-        logs.push(GitCommit {
-            hash: re_match.name("fullhash").unwrap().as_str().to_string(),
-            meta: re_match.name("meta").map(|s| s.as_str().to_string()),
-            message: re_match.name("message").unwrap().as_str().to_string(),
-            date: CommitDate {
-                abs: {
-                    let date_str = re_match.name("dateabs").unwrap().as_str();
-                    if opts.relative {
-                        DateTime::parse_from_rfc2822(date_str).unwrap().into()
-                    } else {
-                        // TODO: this is slightly wrong, as it doesn't account for the time zone of the commit, it just uses the local timezone.  We need to extract the commit time zone from the git log command
-                        let now = Local::now();
-                        let offset = now.offset();
-                        NaiveDate::parse_from_str(date_str, "%a %d %b %Y")
-                            .unwrap()
-                            .and_hms_opt(0, 0, 0)
-                            .unwrap()
-                            .and_local_timezone(*offset)
-                            .unwrap()
-                            .into()
-                    }
-                },
-                repr: re_match.name("daterepr").unwrap().as_str().to_string(),
-            },
-            id: GitIdentity {
-                email: re_match.name("email").unwrap().as_str().to_string(),
-                names: vec![re_match.name("author").unwrap().as_str().to_string()],
-            },
-            // If the separating char is used in the commit message then it's Joever
-            raw: log
-                .split(&META_SEP_CHAR.to_string())
-                .next()
-                .unwrap_or("")
-                .trim()
-                .to_string(),
-        });
-    }
-
-    // Account for reverse option
     if opts.reverse {
-        logs.into_iter().rev().collect()
+        Box::new(iter.collect::<Vec<_>>().into_iter().rev())
     } else {
-        logs
+        Box::new(iter)
     }
+}
+
+pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit> {
+    git_log_iter(n, opts).collect()
 }
 
 fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
