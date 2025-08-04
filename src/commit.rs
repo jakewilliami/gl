@@ -1,6 +1,7 @@
 use super::{
     date::CommitDate, identity::GitIdentity, opts::GitLogOptions, repo::discover_repository,
 };
+use gix::revision::walk::Info as CommitInfo;
 use gix::{bstr::ByteSlice, revision::walk::Sorting, traverse::commit::simple::CommitTimeOrder};
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -60,6 +61,93 @@ pub fn git_log_iter(
     Box::new(git_log(n, opts).into_iter())
 }
 
+impl GitCommit {
+    fn from_info(
+        info: CommitInfo,
+        opts: &GitLogOptions,
+        refs: &HashMap<String, Vec<String>>,
+    ) -> Option<Self> {
+        // let message = info.message.ok_or("Missing commit message")?;
+
+        // Ok(GitCommit {
+        // id: info.id.to_string(),
+        // message: message.to_string(),
+        // })
+        // "not implemented"
+        // Err("not implemented".into())
+
+        // Get commit info
+        let commit = info.object().unwrap();
+        let commit_ref = commit.decode().unwrap();
+
+        // We want to filter out merges.  We can do this by filtering out
+        // the commit if it has more than one parent
+        let mut parents = commit_ref.parents();
+        parents.next();
+        if parents.next().is_some() {
+            return None;
+        }
+
+        // Get author info
+        // TODO: allow GitIdentity by author rather than committer
+        let author = commit_ref.author.actor();
+        let committer = commit_ref.committer();
+
+        if commit.short_id().unwrap().to_string() == *"8d38e3e" {
+            dbg!(&commit);
+            dbg!(&commit_ref);
+        }
+
+        // Filter for author
+        // TODO: why is this so slow?  Without this match, the change since v3.1.0 is
+        //   ∼1.8 × faster, but with this filter it is ∼2.6 × slower
+        if !opts.authors.is_empty() {
+            // NOTE: we intentionally currently filter on committer (to match
+            // `git`'s `--author` behaviour)---just the specified author,
+            // even though that can be contrived.
+            let author_identities = [author.email, author.name];
+
+            let is_author_match = opts.authors.iter().any(|author| {
+                author_identities
+                    .iter()
+                    .any(|possible_author| possible_author.contains_str(author))
+            });
+
+            if !is_author_match {
+                return None;
+            }
+        }
+
+        // Filter for needles in commit messages
+        // TODO: this is also ∼2.8 × slower than the git equivalent, `--author`.  Why?
+        // TODO: this also matches on non-titular text!  Is this intentional?
+        if !opts.needles.is_empty() {
+            let is_needle_match = opts
+                .needles
+                .iter()
+                .all(|needle| commit_ref.message.contains_str(needle));
+
+            if !is_needle_match {
+                return None;
+            }
+        }
+
+        Some(GitCommit {
+            hash: commit.id().to_hex().to_string(),
+            refs: refs
+                .get(&commit.id().to_hex().to_string())
+                .unwrap_or(&vec![])
+                .to_vec(),
+            message: commit_ref.message().title.to_str_lossy().into_owned(),
+            date: CommitDate::from(committer.time),
+            id: GitIdentity {
+                email: author.email.to_str_lossy().into_owned(),
+                names: vec![author.name.to_str_lossy().into_owned()],
+            },
+        })
+    }
+}
+
 pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit> {
     let opts = if let Some(opts) = opts {
         opts
@@ -84,7 +172,9 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
     // This was previously computed and formatted directly within `git`:
     //   https://github.com/jakewilliami/gl/blob/v3.1.1/src/commit.rs#L144-L198
     //
-    // Still TODO: iterate over commits from HEAD, rather than all commits; and consider attempting to clean up ref names?  Prefix with `tag:`; `HEAD ->` where applicable; shorten or not; sort them properly; check target ID; etc.
+    // Still TODO: iterate over commits from HEAD, rather than all commits; and consider
+    //   attempting to clean up ref names?  Prefix with `tag:`; `HEAD ->` where applicable;
+    //   shorten or not; sort them properly; check target ID; etc.
     let platform = repo.references().unwrap();
     let mut refs = HashMap::<String, Vec<String>>::new();
     for r in platform.all().unwrap().filter_map(Result::ok) {
@@ -104,80 +194,8 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
             .sorting(Sorting::ByCommitTime(CommitTimeOrder::NewestFirst))
             .all()
             .unwrap()
-            // TODO: filter out merges
-            .filter_map(|info| {
-                if let Ok(info) = info {
-                    // Get commit info
-                    let commit = info.object().unwrap();
-                    let commit_ref = commit.decode().unwrap();
-
-                    // We want to filter out merges.  We can do this by filtering out
-                    // the commit if it has more than one parent
-                    let mut parents = commit_ref.parents();
-                    parents.next();
-                    if parents.next().is_some() {
-                        return None;
-                    }
-
-                    // Get author info
-                    // TODO: allow GitIdentity by author rather than committer
-                    let author = commit_ref.author.actor();
-                    let committer = commit_ref.committer();
-
-                    if commit.short_id().unwrap().to_string() == *"8d38e3e" {
-                        dbg!(&commit);
-                        dbg!(&commit_ref);
-                    }
-
-                    // Filter for author
-                    // TODO: why is this so slow?  Without this match, the change since v3.1.0 is ∼1.8 × faster, but with this filter it is ∼2.6 × slower
-                    if !opts.authors.is_empty() {
-                        // NOTE: we intentionally currently filter on committer (to match
-                        // `git`'s `--author` behaviour)---just the specified author,
-                        // even though that can be contrived.
-                        let author_identities = [author.email, author.name];
-
-                        let is_author_match = opts.authors.iter().any(|author| {
-                            author_identities
-                                .iter()
-                                .any(|possible_author| possible_author.contains_str(author))
-                        });
-
-                        if !is_author_match {
-                            return None;
-                        }
-                    }
-
-                    // Filter for needles in commit messages
-                    // TODO: this is also ∼2.8 × slower than the git equivalent, `--author`.  Why?
-                    if !opts.needles.is_empty() {
-                        let is_needle_match = opts
-                            .needles
-                            .iter()
-                            .all(|needle| commit_ref.message.contains_str(needle));
-
-                        if !is_needle_match {
-                            return None;
-                        }
-                    }
-
-                    Some(GitCommit {
-                        hash: commit.id().to_hex().to_string(),
-                        refs: refs
-                            .get(&commit.id().to_hex().to_string())
-                            .unwrap_or(&vec![])
-                            .to_vec(),
-                        message: commit_ref.message().title.to_str_lossy().into_owned(),
-                        date: CommitDate::from(committer.time),
-                        id: GitIdentity {
-                            email: author.email.to_str_lossy().into_owned(),
-                            names: vec![author.name.to_str_lossy().into_owned()],
-                        },
-                    })
-                } else {
-                    None
-                }
-            }),
+            .filter_map(Result::ok)
+            .filter_map(|info| GitCommit::from_info(info, opts, &refs)),
     );
 
     let mut logs: Vec<GitCommit> = log_iter.collect();
