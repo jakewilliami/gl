@@ -40,7 +40,7 @@ lazy_static! {
 #[derive(Clone)]
 pub struct GitCommit {
     #[allow(dead_code)]
-    hash: String,
+    pub hash: String,
     #[allow(dead_code)]
     meta: Option<String>,
     #[allow(dead_code)]
@@ -83,6 +83,7 @@ impl Quote for String {
 }
 
 pub struct GitLogIter {
+    #[allow(dead_code)]
     log_data: Arc<String>,
     lines: std::str::Lines<'static>,
     opts: GitLogOptions,
@@ -92,7 +93,7 @@ impl Iterator for GitLogIter {
     type Item = GitCommit;
 
     fn next(&mut self) -> Option<Self::Item> {
-        while let Some(log) = self.lines.next() {
+        for log in self.lines.by_ref() {
             let log: String = log.replace('\"', "");
             let log_stripped = strip_ansi_escapes::strip_str(&log);
             if let Some(re_match) = COMMIT_LOG_RE.captures(&log_stripped) {

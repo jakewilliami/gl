@@ -1,3 +1,4 @@
+use chrono::NaiveDate;
 use clap::{ArgAction, Args, Parser, crate_version};
 
 mod branch;
@@ -5,6 +6,7 @@ mod commit;
 mod config;
 mod contributions;
 mod count;
+mod dates;
 mod env;
 mod identity;
 mod languages;
@@ -237,6 +239,19 @@ pub struct Group {
         default_value_t = false,
     )]
     count: bool,
+
+    /// Find commit ref at date
+    ///
+    /// Given a date, will search through the repository to find the commit ref at that date.
+    #[arg(
+        short = 'd',
+        long = "date",
+        action = ArgAction::Set,
+        num_args = 1,
+        value_name = "date (yyyy-mm-dd)",
+        value_parser = dates::parse_date,
+    )]
+    date: Option<NaiveDate>,
 }
 
 fn main() {
@@ -313,6 +328,8 @@ fn main() {
             // Show contributions graph
             contributions::display_git_contributions_graph(contributors.clone());
         }
+    } else if let Some(date) = cli.group.date {
+        dates::find_first_commit_before_date(date);
     } else {
         log::display_git_log(cli.group.log_number, &opts);
     }
