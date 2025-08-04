@@ -34,15 +34,6 @@ lazy_static! {
         .unwrap();
 }
 
-#[derive(Clone)]
-pub struct GitCommit {
-    pub hash: String,
-    pub message: String,
-    pub refs: Vec<String>,
-    pub date: CommitDate,
-    pub id: GitIdentity,
-}
-
 trait Quote {
     fn quote(&self) -> String;
 }
@@ -53,12 +44,13 @@ impl Quote for String {
     }
 }
 
-// TODO: temporary function; should use iterator (see https://github.com/jakewilliami/gl/commit/44df7970eda30677b1199903a09a660f6367c1bd)
-pub fn git_log_iter(
-    n: Option<usize>,
-    opts: Option<&GitLogOptions>,
-) -> Box<dyn Iterator<Item = GitCommit>> {
-    Box::new(git_log(n, opts).into_iter())
+#[derive(Clone)]
+pub struct GitCommit {
+    pub hash: String,
+    pub message: String,
+    pub refs: Vec<String>,
+    pub date: CommitDate,
+    pub id: GitIdentity,
 }
 
 impl GitCommit {
@@ -146,6 +138,15 @@ impl GitCommit {
             },
         })
     }
+}
+
+// TODO: temporary function; should use iterator
+//   See: github.com/jakewilliami/gl/commit/44df7970
+pub fn git_log_iter(
+    n: Option<usize>,
+    opts: Option<&GitLogOptions>,
+) -> Box<dyn Iterator<Item = GitCommit>> {
+    Box::new(git_log(n, opts).into_iter())
 }
 
 pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit> {
