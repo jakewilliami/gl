@@ -1,5 +1,5 @@
 use chrono::NaiveDate;
-use clap::{ArgAction, Args, Parser, crate_version};
+use clap::{crate_version, ArgAction, Args, Parser};
 
 mod branch;
 mod commit;
@@ -12,6 +12,7 @@ mod identity;
 mod languages;
 mod log;
 mod opts;
+mod origin;
 mod repo;
 mod status;
 
@@ -157,6 +158,16 @@ pub struct Group {
     )]
     remote_branches: bool,
 
+    /// Print the remote origin URL
+    #[arg(
+        short = 'o',
+        long = "origin",
+        action = ArgAction::SetTrue,
+        num_args = 0,
+        default_value_t = false,
+    )]
+    remote_origin: bool,
+
     /// Prints the name of the current repository
     #[arg(
         short = 'r',
@@ -294,6 +305,9 @@ fn main() {
     } else if cli.group.remote_branches {
         // Show remote branches
         branch::get_branch_names(branch::BranchListings::Remotes, &opts);
+    } else if cli.group.remote_origin {
+        // Show remote origin URL
+        origin::get_remote_origin_url();
     } else if cli.group.repo_name {
         // Show the current repository
         let current_repo = repo::current_repository();
