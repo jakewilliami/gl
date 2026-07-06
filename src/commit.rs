@@ -1,4 +1,4 @@
-use super::{branch, config::SHORT_HASH_LENGTH, count, identity::GitIdentity, opts::GitLogOptions};
+use crate::{branch, config::SHORT_HASH_LENGTH, count, identity::GitIdentity, opts::GitLogOptions};
 use chrono::{DateTime, Local, NaiveDate};
 use regex::Regex;
 use std::{

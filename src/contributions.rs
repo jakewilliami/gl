@@ -1,4 +1,4 @@
-use super::{
+use crate::{
     commit::{GitCommit, git_log},
     identity::GitIdentity,
 };

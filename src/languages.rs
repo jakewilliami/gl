@@ -1,4 +1,4 @@
-use super::{opts::GitLogOptions, repo};
+use crate::{opts::GitLogOptions, repo};
 use colored::*;
 use colorsys::Rgb;
 use hyperpolyglot::{Detection, Language, get_language_breakdown};

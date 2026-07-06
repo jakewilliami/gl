@@ -1,4 +1,4 @@
-use super::{
+use crate::{
     commit::{GitCommit, git_log_iter, has_commits},
     opts::TagFormat,
     origin::remote_origin_url,

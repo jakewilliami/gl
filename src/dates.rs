@@ -1,4 +1,4 @@
-use super::{
+use crate::{
     commit::{GitCommit, HashFormat, git_log_iter},
     opts::GitLogOptions,
 };

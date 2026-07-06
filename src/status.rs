@@ -1,4 +1,4 @@
-use super::opts::GitLogOptions;
+use crate::opts::GitLogOptions;
 use std::{
     ffi::OsString,
     path::PathBuf,
