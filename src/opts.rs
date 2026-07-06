@@ -1,3 +1,5 @@
+use clap::ValueEnum;
+
 #[derive(Clone)]
 pub struct GitLogOptions {
     pub relative: bool, // relative commit dates
@@ -21,4 +23,10 @@ impl Default for GitLogOptions {
             needles: Vec::new(),
         }
     }
+}
+
+#[derive(Clone, ValueEnum)]
+pub enum TagFormat {
+    Short,
+    Long,
 }

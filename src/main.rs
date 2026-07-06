@@ -266,22 +266,21 @@ pub struct Group {
     )]
     date: Option<NaiveDate>,
 
-    // TODO: add option to list the descriptions/messages as well
     // TODO: add option to not parse tags as versions?
     // TODO: provide option to create tag based on latest commit message
     // TODO: provide option to bump minor or major by default also?  (current default is to
     //    bump patch version)
     /// List tags
     ///
-    /// List all of the tags in the git repository
+    /// List all of the tags in the git repository.  By default, the short tag format is used.
     #[arg(
         short = 't',
         long = "tags",
-        action = ArgAction::SetTrue,
-        num_args = 0,
-        default_value_t = false,
+        value_name = "format",
+        default_missing_value = "short",
+        num_args = 0..=1,
     )]
-    tags: bool,
+    tags: Option<opts::TagFormat>,
 
     #[command(subcommand)]
     command: Option<Commands>,
@@ -354,8 +353,8 @@ fn main() {
         if let Some(current_repo) = current_repo {
             println!("{current_repo}");
         }
-    } else if cli.group.tags {
-        tag::get_tags();
+    } else if let Some(fmt) = cli.group.tags {
+        tag::get_tags(fmt);
     } else if cli.group.commit_count {
         // Show commit count
         count::get_commit_count("today", &opts);
