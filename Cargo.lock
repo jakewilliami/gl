@@ -379,7 +379,7 @@ dependencies = [
 
 [[package]]
 name = "gl"
-version = "3.5.1"
+version = "3.5.2"
 dependencies = [
  "anyhow",
  "chrono",

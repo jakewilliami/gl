@@ -314,16 +314,8 @@ fn open_release_urls(latest_commit: &GitCommit) {
 }
 
 pub fn get_tags() {
-    let tags = tags();
-    let mut iter = tags.iter().peekable();
-
-    while let Some(tag) = iter.next() {
-        print!("{tag}");
-
-        // Print a new line separator unless this is the last line
-        if iter.peek().is_some() {
-            println!();
-        }
+    for tag in tags() {
+        println!("{tag}")
     }
 }
 
