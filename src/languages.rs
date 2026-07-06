@@ -1,7 +1,7 @@
 use super::{opts::GitLogOptions, repo};
 use colored::*;
 use colorsys::Rgb;
-use hyperpolyglot::{get_language_breakdown, Detection, Language};
+use hyperpolyglot::{Detection, Language, get_language_breakdown};
 use std::{collections::HashMap, convert::TryFrom, path::PathBuf};
 
 pub struct LanguageSummary {

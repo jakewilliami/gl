@@ -1,5 +1,5 @@
 use super::{
-    commit::{git_log, GitCommit},
+    commit::{GitCommit, git_log},
     config,
     opts::GitLogOptions,
 };

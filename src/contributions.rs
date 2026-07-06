@@ -1,5 +1,5 @@
 use super::{
-    commit::{git_log, GitCommit},
+    commit::{GitCommit, git_log},
     identity::GitIdentity,
 };
 use chrono::{Duration, Local, NaiveDate};
@@ -9,7 +9,7 @@ use std::{
     collections::HashMap,
     process::{Command, Stdio},
 };
-use tabular::{row, Table};
+use tabular::{Table, row};
 use textplots::{
     Chart, ColorPlot, LabelBuilder, LabelFormat, Shape, TickDisplay, TickDisplayBuilder,
 };
