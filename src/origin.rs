@@ -24,7 +24,10 @@ pub fn remote_origin_url() -> Option<String> {
         .expect("Failed to execute `git remote`");
 
     if output.status.success() {
-        let origin_url = String::from_utf8_lossy(&output.stdout).trim().to_owned();
+        let origin_url = String::from_utf8_lossy(&output.stdout)
+            .trim()
+            .trim_end_matches(".git")
+            .to_owned();
         Some(origin_url)
     } else {
         // TODO: String::from_utf8_lossy(&output.stderr).into_owned()
