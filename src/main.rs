@@ -1,5 +1,6 @@
 use chrono::NaiveDate;
-use clap::{crate_authors, crate_name, crate_version, ArgAction, Args, Parser};
+use clap::{ArgAction, Args, Parser, Subcommand, crate_authors, crate_name, crate_version};
+use std::process;
 
 mod branch;
 mod commit;
@@ -20,7 +21,6 @@ mod version;
 
 // TODO list (delete help commands as I go)
 // -i | --issues        Prints currently open issues in present repository.
-// -t | --tags | --labels   Lists this repository's issues' tags/labels .
 // -f | --filtered-issues   Prints filtered issues by tag.  By default, prints issues tagged with "enhancement" unless stated otherwise.
 // -e | --exclude-issues    Prints issues excluding issues that are tagged with "depricated" and "pdfsearch" unless stated otherwise.
 // Also, I have notes on github-linguist which I could add to this app, maybe under a `help` subcommand?
@@ -266,6 +266,11 @@ pub struct Group {
     )]
     date: Option<NaiveDate>,
 
+    // TODO: add option to list the descriptions/messages as well
+    // TODO: add option to not parse tags as versions?
+    // TODO: provide option to create tag based on latest commit message
+    // TODO: provide option to bump minor or major by default also?  (current default is to
+    //    bump patch version)
     /// List tags
     ///
     /// List all of the tags in the git repository
@@ -277,6 +282,18 @@ pub struct Group {
         default_value_t = false,
     )]
     tags: bool,
+
+    #[command(subcommand)]
+    command: Option<Commands>,
+}
+
+#[derive(Subcommand)]
+enum Commands {
+    /// Tag and push a new version
+    ///
+    /// Ask for tag and annotation message.  Creates the tag locally and pushes it to origin.
+    /// Note that this assumes tags are semantic versions.
+    Tag,
 }
 
 fn main() {
@@ -291,6 +308,15 @@ fn main() {
         authors: cli.authors,
         needles: cli.grep,
     };
+
+    // Handle subcommand and exit
+    match cli.group.command {
+        Some(Commands::Tag) => {
+            tag::tag();
+            process::exit(0);
+        }
+        None => {}
+    }
 
     // Because all of these options are in a group, at most one branch should
     // ever be matched, so it is safe to put this in an if-else chain

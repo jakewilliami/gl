@@ -39,12 +39,11 @@ static COMMIT_LOG_RE: LazyLock<Regex> = LazyLock::new(|| {
 
 #[derive(Clone)]
 pub struct GitCommit {
-    #[allow(dead_code)]
     pub hash: String,
     #[allow(dead_code)]
     meta: Option<String>,
     #[allow(dead_code)]
-    message: String,
+    pub message: String,
     pub date: CommitDate,
     pub id: GitIdentity,
     pub raw: String,
@@ -288,4 +287,9 @@ fn get_enclosing(enclosing_chars: Option<&str>) -> (&str, &str) {
         let (enclosing_start, enclosing_end) = enclosing_chars.split_at(i);
         (enclosing_start, enclosing_end)
     }
+}
+
+pub fn has_commits() -> bool {
+    // This function will run `git rev-parse HEAD`
+    branch::current_branch().is_some()
 }

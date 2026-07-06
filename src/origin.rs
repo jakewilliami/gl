@@ -12,7 +12,7 @@ pub fn get_remote_origin_url() {
 //
 // <https://stackoverflow.com/a/32991784>
 // <https://stackoverflow.com/a/4089452>
-fn remote_origin_url() -> Option<String> {
+pub fn remote_origin_url() -> Option<String> {
     let mut cmd = Command::new("git");
     cmd.arg("remote");
     cmd.arg("get-url");
@@ -21,7 +21,7 @@ fn remote_origin_url() -> Option<String> {
     let output = cmd
         .stdout(Stdio::piped())
         .output()
-        .expect("Failed to execute `git config`");
+        .expect("Failed to execute `git remote`");
 
     if output.status.success() {
         let origin_url = String::from_utf8_lossy(&output.stdout).into_owned();
