@@ -106,7 +106,9 @@ impl FromStr for Tag {
             assert_eq!(version, trailing);
         }
 
-        let description = m.name("description").map(|m| m.as_str().to_owned());
+        let description = m
+            .name("description")
+            .map(|m| m.as_str().trim().trim_end_matches('!').trim().to_owned());
 
         Ok(Tag {
             version,
