@@ -211,17 +211,17 @@ fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
 
     cmd.arg("--abbrev-commit");
 
-    if let Some(n) = n {
-        if !opts.all {
-            // If n is defined, restrict the log to only show n of them (only if we don't want to show all logs)
-            cmd.arg(format!("-n {n}"));
+    if let Some(n) = n
+        && !opts.all
+    {
+        // If n is defined, restrict the log to only show n of them (only if we don't want to show all logs)
+        cmd.arg(format!("-n {n}"));
 
-            // If the number of logs is defined, but so is rev, then we want to skip some number of logs
-            // Note: if --all is specified, we don't want to skip anything.  --rev will be handled upstream if needed
-            if opts.reverse {
-                let log_count = count::commit_count();
-                cmd.arg(format!("--skip={}", log_count - n));
-            }
+        // If the number of logs is defined, but so is rev, then we want to skip some number of logs
+        // Note: if --all is specified, we don't want to skip anything.  --rev will be handled upstream if needed
+        if opts.reverse {
+            let log_count = count::commit_count();
+            cmd.arg(format!("--skip={}", log_count - n));
         }
     }
 
@@ -267,8 +267,9 @@ fn colourise_log_fmt(
 ) -> String {
     let prefix = prefix.unwrap_or("");
     let (enclosing_start, enclosing_end) = get_enclosing(enclosing_chars);
-    if opts.colour && colour.is_some() {
-        let colour = colour.unwrap();
+    if opts.colour
+        && let Some(colour) = colour
+    {
         format!("{prefix}%C({colour}){enclosing_start}%{fmt}{enclosing_end}%Creset")
     } else {
         format!("{prefix}{enclosing_start}%{fmt}{enclosing_end}")
