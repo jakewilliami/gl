@@ -1,6 +1,4 @@
-use super::branch::current_branch;
-use super::opts::GitLogOptions;
-use super::repo::current_repository;
+use super::{branch::current_branch, opts::GitLogOptions, repo::current_repository};
 use chrono::{DateTime, Duration, Local, NaiveTime};
 use colored::*;
 use std::process::{Command, Output, Stdio};

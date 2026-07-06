@@ -1,6 +1,8 @@
-use super::commit::{GitCommit, git_log};
-use super::config;
-use super::opts::GitLogOptions;
+use super::{
+    commit::{git_log, GitCommit},
+    config,
+    opts::GitLogOptions,
+};
 use colored::*;
 use regex::Regex;
 

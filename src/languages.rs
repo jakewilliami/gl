@@ -1,11 +1,8 @@
-use super::opts::GitLogOptions;
-use super::repo;
+use super::{opts::GitLogOptions, repo};
 use colored::*;
 use colorsys::Rgb;
-use hyperpolyglot::{Detection, Language, get_language_breakdown};
-use std::collections::HashMap;
-use std::convert::TryFrom;
-use std::path::PathBuf;
+use hyperpolyglot::{get_language_breakdown, Detection, Language};
+use std::{collections::HashMap, convert::TryFrom, path::PathBuf};
 
 pub struct LanguageSummary {
     language: Option<Language>,

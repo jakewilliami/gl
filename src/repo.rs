@@ -1,5 +1,7 @@
-use std::path::{Path, PathBuf};
-use std::process::{Command, Stdio};
+use std::{
+    path::{Path, PathBuf},
+    process::{Command, Stdio},
+};
 
 pub fn top_level_repo_path() -> Option<String> {
     let mut cmd = Command::new("git");

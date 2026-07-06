@@ -1,7 +1,4 @@
-use super::config::SHORT_HASH_LENGTH;
-use super::count;
-use super::identity::GitIdentity;
-use super::opts::GitLogOptions;
+use super::{branch, config::SHORT_HASH_LENGTH, count, identity::GitIdentity, opts::GitLogOptions};
 use chrono::{DateTime, Local, NaiveDate};
 use lazy_static::lazy_static;
 use regex::Regex;

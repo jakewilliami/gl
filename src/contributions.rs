@@ -1,11 +1,15 @@
-use super::commit::{GitCommit, git_log};
-use super::identity::GitIdentity;
+use super::{
+    commit::{git_log, GitCommit},
+    identity::GitIdentity,
+};
 use chrono::{Duration, Local, NaiveDate};
 use regex::Regex;
-use std::cmp::max;
-use std::collections::HashMap;
-use std::process::{Command, Stdio};
-use tabular::{Table, row};
+use std::{
+    cmp::max,
+    collections::HashMap,
+    process::{Command, Stdio},
+};
+use tabular::{row, Table};
 use textplots::{
     Chart, ColorPlot, LabelBuilder, LabelFormat, Shape, TickDisplay, TickDisplayBuilder,
 };

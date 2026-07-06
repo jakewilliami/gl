@@ -1,7 +1,9 @@
 use super::opts::GitLogOptions;
-use std::ffi::OsString;
-use std::path::PathBuf;
-use std::process::{Command, Stdio};
+use std::{
+    ffi::OsString,
+    path::PathBuf,
+    process::{Command, Stdio},
+};
 
 pub fn get_git_status(dir: &Option<String>, opts: &GitLogOptions) {
     let given_dir: PathBuf = if (dir).is_none() {

@@ -1,5 +1,7 @@
-use super::commit::{GitCommit, HashFormat, git_log_iter};
-use super::opts::GitLogOptions;
+use super::{
+    commit::{git_log_iter, GitCommit, HashFormat},
+    opts::GitLogOptions,
+};
 use chrono::NaiveDate;
 
 pub fn parse_date(s: &str) -> Result<NaiveDate, String> {
