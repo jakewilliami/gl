@@ -32,6 +32,7 @@ fn git_status(dir: &OsString, opts: &GitLogOptions) -> String {
     if output.status.success() {
         String::from_utf8_lossy(&output.stdout).into_owned()
     } else {
+        // TODO: String::from_utf8_lossy(&output.stderr).into_owned()
         println!(
             "An error has occured.  It is likely that you aren't in a git repository, or you may not have `git` installed."
         );

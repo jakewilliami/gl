@@ -94,6 +94,7 @@ impl Iterator for GitLogIter {
 
     fn next(&mut self) -> Option<Self::Item> {
         for log in self.lines.by_ref() {
+            // TODO: is this a problem if there are quotes in the string itself?
             let log: String = log.replace('\"', "");
             let log_stripped = strip_ansi_escapes::strip_str(&log);
             if let Some(re_match) = COMMIT_LOG_RE.captures(&log_stripped) {
@@ -235,6 +236,7 @@ fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
     if output.status.success() {
         String::from_utf8_lossy(&output.stdout).into_owned()
     } else {
+        // TODO: String::from_utf8_lossy(&output.stderr).into_owned()
         println!(
             "An error has occured.  It is likely that you aren't in a git repository, or you may not have `git` installed."
         );

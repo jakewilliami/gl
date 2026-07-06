@@ -201,6 +201,7 @@ fn parse_commit_count(cmd_out: Output) -> Option<String> {
         }
         Some(commit_count)
     } else {
+        // TODO: String::from_utf8_lossy(&output.stderr).into_owned()
         None
     }
 }

@@ -22,6 +22,7 @@ pub fn top_level_repo_path() -> Option<String> {
         }
         Some(current_repo_path)
     } else {
+        // TODO: String::from_utf8_lossy(&output.stderr).into_owned()
         None
     }
 }

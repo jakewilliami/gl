@@ -51,6 +51,7 @@ pub fn current_branch() -> Option<String> {
 
         Some(current_branch_name)
     } else {
+        // TODO: String::from_utf8_lossy(&output.stderr).into_owned()
         None
     }
 }
@@ -72,6 +73,7 @@ fn branch_names(opts: &GitLogOptions) -> Option<String> {
 
         Some(branch_names)
     } else {
+        // TODO: String::from_utf8_lossy(&output.stderr).into_owned()
         None
     }
 }
@@ -94,6 +96,7 @@ fn remote_branches(opts: &GitLogOptions) -> Option<String> {
 
         Some(branch_names)
     } else {
+        // TODO: String::from_utf8_lossy(&output.stderr).into_owned()
         None
     }
 }

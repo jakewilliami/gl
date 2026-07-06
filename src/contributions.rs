@@ -301,6 +301,7 @@ fn git_file_contributions_per_author(identity: GitIdentity) -> Vec<GitFileContri
             })
             .collect()
     } else {
+        // TODO: String::from_utf8_lossy(&output.stderr).into_owned()
         println!(
             "An error has occured while attempting to execute `git log` with author {}.",
             identity.email
@@ -370,6 +371,7 @@ fn git_author_frequency() -> HashMap<String, (GitIdentity, usize)> {
 
         author_contribution_frequency
     } else {
+        // TODO: String::from_utf8_lossy(&output.stderr).into_owned()
         println!(
             "An error has occured.  It is likely that you aren't in a git repository, or you may not have `git` installed."
         );

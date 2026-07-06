@@ -27,6 +27,7 @@ fn remote_origin_url() -> Option<String> {
         let origin_url = String::from_utf8_lossy(&output.stdout).into_owned();
         Some(origin_url)
     } else {
+        // TODO: String::from_utf8_lossy(&output.stderr).into_owned()
         None
     }
 }
