@@ -1,12 +1,13 @@
 [package]
 name = "gl"
-version = "3.3.0"
+version = "3.4.0"
 authors = ["Jake W. Ireland <jakewilliami@icloud.com>"]
 edition = "2024"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+anyhow = "1.0.103"
 chrono = "0.4.38"
 clap = { version = "4.5.20", features = ["cargo", "wrap_help", "derive"] }
 colored = "2.1.0"
@@ -14,8 +15,10 @@ colorsys = "0.6.7"
 hyperpolyglot = "0.1.7"
 json = "0.12.4"
 lazy_static = "1.5.0"
+lenient_semver = { version = "0.4.2", features = [ "version_semver" ] }
 regex = "1.11.0"
 rgb = "0.8.50"
+semver = "1.0.28"
 strip-ansi-escapes = "0.2.0"
 tabular = "0.2.0"
 termsize = "0.1.9"

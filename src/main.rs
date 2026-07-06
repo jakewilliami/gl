@@ -1,5 +1,5 @@
 use chrono::NaiveDate;
-use clap::{crate_version, ArgAction, Args, Parser};
+use clap::{crate_authors, crate_name, crate_version, ArgAction, Args, Parser};
 
 mod branch;
 mod commit;
@@ -15,6 +15,8 @@ mod opts;
 mod origin;
 mod repo;
 mod status;
+mod tag;
+mod version;
 
 // TODO list (delete help commands as I go)
 // -i | --issues        Prints currently open issues in present repository.
@@ -26,8 +28,8 @@ mod status;
 
 #[derive(Parser)]
 #[command(
-    name = "gl",
-    author = "Jake·W.·Ireland.·<jakewilliami@icloud.com>",
+    name = crate_name!(),
+    author = crate_authors!(", "),
     version = crate_version!(),
 )]
 /// Git log and other personalised git utilities.
@@ -263,6 +265,18 @@ pub struct Group {
         value_parser = dates::parse_date,
     )]
     date: Option<NaiveDate>,
+
+    /// List tags
+    ///
+    /// List all of the tags in the git repository
+    #[arg(
+        short = 't',
+        long = "tags",
+        action = ArgAction::SetTrue,
+        num_args = 0,
+        default_value_t = false,
+    )]
+    tags: bool,
 }
 
 fn main() {
@@ -314,6 +328,8 @@ fn main() {
         if let Some(current_repo) = current_repo {
             println!("{current_repo}");
         }
+    } else if cli.group.tags {
+        tag::get_tags();
     } else if cli.group.commit_count {
         // Show commit count
         count::get_commit_count("today", &opts);
