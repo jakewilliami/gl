@@ -170,7 +170,15 @@ fn prompt_tag_version(
     latest_tag: &Tag,
     latest_commit: &GitCommit,
 ) -> Version {
-    let next_tag = latest_tag.version.bump_patch();
+    // Suggest next tag from latest commit but fall back to patch bump from latest tag
+    //
+    // TODO: should we confirm that this matches Cargo.toml?  Or at least the version of
+    //   Cargo.toml (or Cargo.lock) that is staged, in case there are unstaged changes
+    let next_tag = if let Ok(commit_tag) = Tag::try_from(latest_commit) {
+        commit_tag.version
+    } else {
+        latest_tag.version.bump_patch()
+    };
 
     Input::<Version>::new()
         .with_prompt(format!("Tag name (current: {})", latest_tag.version))
