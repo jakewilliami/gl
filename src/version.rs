@@ -1,14 +1,19 @@
 use anyhow::{anyhow, Error};
-use lazy_static::lazy_static;
-use std::{fmt, ops::Deref};
+use std::{fmt, ops::Deref, sync::LazyLock};
 
-lazy_static! {
-    // Modified semver regex from:
-    //   <https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string>
-    // TODO: implement less hacky version of avoiding duplicate capture group names
-    pub static ref SEMVER_PAT1: String = String::from(r"v(?P<major1>0|[1-9]\d*)\.(?P<minor1>0|[1-9]\d*)(?:\.(?P<patch1>0|[1-9]\d*))?(?:-(?P<prerelease1>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata1>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?");
-    pub static ref SEMVER_PAT2: String = String::from(r"v(?P<major2>0|[1-9]\d*)\.(?P<minor2>0|[1-9]\d*)(?:\.(?P<patch2>0|[1-9]\d*))?(?:-(?P<prerelease2>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata2>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?");
-}
+// Modified semver regex from:
+//   <https://semver.org/#is-there-a-suggested-regular-expression-regex-to-check-a-semver-string>
+// TODO: implement less hacky version of avoiding duplicate capture group names
+pub static SEMVER_PAT1: LazyLock<String> = LazyLock::new(|| {
+    String::from(
+        r"v(?P<major1>0|[1-9]\d*)\.(?P<minor1>0|[1-9]\d*)(?:\.(?P<patch1>0|[1-9]\d*))?(?:-(?P<prerelease1>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata1>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?",
+    )
+});
+pub static SEMVER_PAT2: LazyLock<String> = LazyLock::new(|| {
+    String::from(
+        r"v(?P<major2>0|[1-9]\d*)\.(?P<minor2>0|[1-9]\d*)(?:\.(?P<patch2>0|[1-9]\d*))?(?:-(?P<prerelease2>(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*)(?:\.(?:0|[1-9]\d*|\d*[a-zA-Z-][0-9a-zA-Z-]*))*))?(?:\+(?P<buildmetadata2>[0-9a-zA-Z-]+(?:\.[0-9a-zA-Z-]+)*))?",
+    )
+});
 
 // Wrapper struct around semver::Version for our own Display and other implementations
 #[derive(PartialEq, Clone)]

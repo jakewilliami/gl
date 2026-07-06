@@ -1,27 +1,22 @@
 use super::version::{self, AsVersion, Version};
 use anyhow::Error;
-use lazy_static::lazy_static;
 use regex::Regex;
 use std::{
     fmt,
     process::{Command, Stdio},
     str::FromStr,
+    sync::LazyLock,
 };
 
-// TODO: Prefer std::sync::LazyLock
-lazy_static! {
-    static ref MAX_COMMIT_LEN: usize = 69;
-    static ref META_SEP_CHAR: char = char::from_u32(0x2E3A).unwrap();
-    static ref TAG_RE: Regex = Regex::new(
-        &format!(
-            r"^(?P<raw>(?P<version>(?P<tag>{}))(?:{}(?P<rest>(?:(?P<description>.+)(?:\s+(?P<trailingver>{}))?)))?)$",
-            *version::SEMVER_PAT1,
-            *META_SEP_CHAR,
-            *version::SEMVER_PAT2,
-        ),
-    )
-        .unwrap();
-}
+static META_SEP_CHAR: LazyLock<char> = LazyLock::new(|| char::from_u32(0x2E3A).unwrap());
+static TAG_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(&format!(
+        r"^(?P<raw>(?P<version>(?P<tag>{}))(?:{}(?P<rest>(?:(?P<description>.+)(?:\s+(?P<trailingver>{}))?)))?)$",
+        *version::SEMVER_PAT1,
+        *META_SEP_CHAR,
+        *version::SEMVER_PAT2,
+    )).unwrap()
+});
 
 #[derive(Clone, Debug)]
 struct Tag {

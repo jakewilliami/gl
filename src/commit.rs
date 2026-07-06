@@ -1,28 +1,31 @@
 use super::{branch, config::SHORT_HASH_LENGTH, count, identity::GitIdentity, opts::GitLogOptions};
 use chrono::{DateTime, Local, NaiveDate};
-use lazy_static::lazy_static;
 use regex::Regex;
 use std::{
     char,
     process::{Command, Stdio},
-    sync::Arc,
+    sync::{Arc, LazyLock},
 };
 
-lazy_static! {
-    // This is a good separating dash, but relies on it not being used inside commit messages!
-    static ref META_SEP_CHAR: char = char::from_u32(0x2E3A).unwrap();
+// This is a good separating dash, but relies on it not being used inside commit messages!
+static META_SEP_CHAR: LazyLock<char> = LazyLock::new(|| char::from_u32(0x2E3A).unwrap());
 
-    // Quotes for log metadata
-    // These need to be unique.  They are not traditional quotes.  See  v3.0.2 and v3.1.2.
-    static ref INITIAL_QUOTE_CHAR: char = char::from_u32(0x2560).unwrap();
-    static ref FINAL_QUOTE_CHAR: char = char::from_u32(0x2563).unwrap();
+// Quotes for log metadata
+// These need to be unique.  They are not traditional quotes.  See  v3.0.2 and v3.1.2.
+static INITIAL_QUOTE_CHAR: LazyLock<char> = LazyLock::new(|| char::from_u32(0x2560).unwrap());
+static FINAL_QUOTE_CHAR: LazyLock<char> = LazyLock::new(|| char::from_u32(0x2563).unwrap());
 
-    //Regex for commit logs
-    static ref UNTIL_FINAL_QUOTE_PAT: String = format!(r"[^{}]", *FINAL_QUOTE_CHAR);
-    static ref DATE_META_PAT: String = format!(r"(?P<dateabs>{}+)", *UNTIL_FINAL_QUOTE_PAT).quote();
-    static ref HASH_META_PAT: String = String::from(r"(?P<fullhash>[a-f0-9]+)").quote();
-    static ref EMAIL_META_PAT: String = format!(r"(?P<email>{}*)", *UNTIL_FINAL_QUOTE_PAT).quote();
-    static ref COMMIT_LOG_RE: Regex = Regex::new(
+//Regex for commit logs
+static UNTIL_FINAL_QUOTE_PAT: LazyLock<String> =
+    LazyLock::new(|| format!(r"[^{}]", *FINAL_QUOTE_CHAR));
+static DATE_META_PAT: LazyLock<String> =
+    LazyLock::new(|| format!(r"(?P<dateabs>{}+)", *UNTIL_FINAL_QUOTE_PAT).quote());
+static HASH_META_PAT: LazyLock<String> =
+    LazyLock::new(|| String::from(r"(?P<fullhash>[a-f0-9]+)").quote());
+static EMAIL_META_PAT: LazyLock<String> =
+    LazyLock::new(|| format!(r"(?P<email>{}*)", *UNTIL_FINAL_QUOTE_PAT).quote());
+static COMMIT_LOG_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(
         &format!(
             r"^(?P<raw>(?P<hash>[a-f0-9]+)\s\-\s(\((?P<meta>[^\)]+)\)\s)?(?P<message>.+)\((?P<daterepr>[^\)]+)\)\s<(?P<author>[^>]*)>){}dateabs\:\s{},\shash\:\s{},\semail\:\s{}$",
             *META_SEP_CHAR,
@@ -31,8 +34,8 @@ lazy_static! {
             *EMAIL_META_PAT,
         ),
     )
-        .unwrap();
-}
+        .unwrap()
+});
 
 #[derive(Clone)]
 pub struct GitCommit {
