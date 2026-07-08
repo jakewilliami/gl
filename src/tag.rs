@@ -2,6 +2,7 @@ use crate::{
     commit::{GitCommit, git_log_iter, has_commits},
     opts::TagFormat,
     origin::remote_origin_url,
+    repo::discover_repository,
     version::{self, AsVersion, Bump, NextVersion, Version},
 };
 use anyhow::{Error, anyhow};
@@ -331,35 +332,41 @@ pub fn get_tags(fmt: TagFormat) {
     }
 }
 
+// TODO: support --rev for tags
 fn tags() -> Vec<Tag> {
-    let mut cmd = Command::new("git");
-    cmd.arg("tag");
-    cmd.arg("--list");
-    // Sort in reverse order by tag name, which is a version number
-    //   <https://stackoverflow.com/a/1064505>
-    cmd.arg("--sort=-version:refname");
-    // Include tag message as well
-    //   <https://stackoverflow.com/a/59356030>
-    cmd.arg(format!(
-        "--format=%(refname:short){}%(subject)",
-        *META_SEP_CHAR
-    ));
+    let repo = discover_repository().unwrap();
+    let platform = repo.references().unwrap();
 
-    let output = cmd
-        .stdout(Stdio::piped())
-        .output()
-        .expect("Failed to execute `git tag`");
+    // Adapted from:
+    //   https://github.com/GitoxideLabs/gitoxide/blob/19bdf8a7/gitoxide-core/src/repository/tag.rs#L51-L54
+    let mut tags: Vec<Tag> = Vec::new();
+    for mut reference in platform.tags().unwrap().flatten() {
+        let tag = reference.peel_to_tag();
+        let tag_ref = tag.as_ref().map(gix::Tag::decode).unwrap();
 
-    if output.status.success() {
-        let tags = String::from_utf8_lossy(&output.stdout).into_owned();
-        // TODO: or do we want to _warn_ on non-parseable tags?
-        tags.lines()
-            .map(|s| s.parse::<Tag>().expect("failed to parse Tag"))
-            .collect()
-    } else {
-        // TODO: String::from_utf8_lossy(&output.stderr).into_owned()
-        vec![]
+        // Construct crate::Tag from relevant tag information
+        if let Ok(tag_ref) = tag_ref {
+            let name = reference.name().shorten();
+            // We must only take the first like (equivalent to %(subject) format)
+            // TODO: why so many intermediate values from BStr -> String -> &str?
+            let message = tag_ref.message.to_owned().to_string();
+            let subject = message.lines().next().unwrap().trim();
+
+            // Construct parseable format, equivalent to --format=%(refname:short){}%(subject)
+            // TODO: surely now that we are using a git lib we can bypass the janky parsing
+            tags.push(
+                format!("{name}{}{subject}", *META_SEP_CHAR)
+                    .as_str()
+                    .parse::<Tag>()
+                    .unwrap(),
+            );
+        }
     }
+
+    // Reverse order by version
+    tags.sort_by(|a, b| b.version.cmp(&a.version));
+
+    tags
 }
 
 fn create_tag(tag: &Tag) {
