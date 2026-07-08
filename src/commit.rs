@@ -1,48 +1,9 @@
-use super::{
+use crate::{
     date::CommitDate, identity::GitIdentity, opts::GitLogOptions, repo::discover_repository,
 };
 use gix::revision::walk::Info as CommitInfo;
 use gix::{bstr::ByteSlice, revision::walk::Sorting, traverse::commit::simple::CommitTimeOrder};
-use lazy_static::lazy_static;
-use regex::Regex;
-use std::char;
 use std::collections::HashMap;
-
-lazy_static! {
-    // This is a good separating dash, but relies on it not being used inside commit messages!
-    static ref META_SEP_CHAR: char = char::from_u32(0x2E3A).unwrap();
-
-    // Quotes for log metadata
-    // These need to be unique.  They are not traditional quotes.  See  v3.0.2 and v3.1.2.
-    static ref INITIAL_QUOTE_CHAR: char = char::from_u32(0x2560).unwrap();
-    static ref FINAL_QUOTE_CHAR: char = char::from_u32(0x2563).unwrap();
-
-    //Regex for commit logs
-    static ref UNTIL_FINAL_QUOTE_PAT: String = format!(r"[^{}]", *FINAL_QUOTE_CHAR);
-    static ref DATE_META_PAT: String = format!(r"(?P<dateabs>{}+)", *UNTIL_FINAL_QUOTE_PAT).quote();
-    static ref HASH_META_PAT: String = String::from(r"(?P<fullhash>[a-f0-9]+)").quote();
-    static ref EMAIL_META_PAT: String = format!(r"(?P<email>{}*)", *UNTIL_FINAL_QUOTE_PAT).quote();
-    static ref COMMIT_LOG_RE: Regex = Regex::new(
-        &format!(
-            r"^(?P<raw>(?P<hash>[a-f0-9]+)\s\-\s(\((?P<meta>[^\)]+)\)\s)?(?P<message>.+)\((?P<daterepr>[^\)]+)\)\s<(?P<author>[^>]*)>){}dateabs\:\s{},\shash\:\s{},\semail\:\s{}$",
-            *META_SEP_CHAR,
-            *DATE_META_PAT,
-            *HASH_META_PAT,
-            *EMAIL_META_PAT,
-        ),
-    )
-        .unwrap();
-}
-
-trait Quote {
-    fn quote(&self) -> String;
-}
-
-impl Quote for String {
-    fn quote(&self) -> String {
-        format!("{}{}{}", *INITIAL_QUOTE_CHAR, &self, *FINAL_QUOTE_CHAR)
-    }
-}
 
 #[derive(Clone)]
 pub struct GitCommit {
@@ -219,10 +180,10 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
         logs.reverse()
     }
 
-    if let Some(n) = n {
-        if !opts.all {
-            logs = logs.into_iter().take(n).collect();
-        }
+    if let Some(n) = n
+        && !opts.all
+    {
+        logs = logs.into_iter().take(n).collect();
     }
 
     logs
@@ -240,6 +201,7 @@ impl Iterator for GitLogIter {
 
     fn next(&mut self) -> Option<Self::Item> {
         for log in self.lines.by_ref() {
+            // TODO: is this a problem if there are quotes in the string itself?
             let log: String = log.replace('\"', "");
             let log_stripped = strip_ansi_escapes::strip_str(&log);
             if let Some(re_match) = COMMIT_LOG_RE.captures(&log_stripped) {
@@ -315,3 +277,12 @@ pub fn git_log_iter(
 pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit> {
     git_log_iter(n, opts).collect()
 }*/
+
+pub fn has_commits() -> bool {
+    // TODO: I should somehow store the repo globally?  It would save some
+    // calls to discover_repository
+    let repo = discover_repository().unwrap();
+
+    // Returns true if there is a commit at head
+    repo.head_commit().is_ok()
+}

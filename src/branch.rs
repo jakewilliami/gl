@@ -1,4 +1,4 @@
-use super::{opts::GitLogOptions, repo::discover_repository};
+use crate::{opts::GitLogOptions, repo::discover_repository};
 use colored::*;
 use gix::{Repository, refs::TargetRef::*};
 

@@ -1,10 +1,14 @@
-use super::commit::{GitCommit, git_log};
-use super::identity::GitIdentity;
+use crate::{
+    commit::{GitCommit, git_log},
+    identity::GitIdentity,
+};
 use chrono::{Duration, Local, NaiveDate};
 use regex::Regex;
-use std::cmp::max;
-use std::collections::HashMap;
-use std::process::{Command, Stdio};
+use std::{
+    cmp::max,
+    collections::HashMap,
+    process::{Command, Stdio},
+};
 use tabular::{Table, row};
 use textplots::{
     Chart, ColorPlot, LabelBuilder, LabelFormat, Shape, TickDisplay, TickDisplayBuilder,
@@ -301,6 +305,7 @@ fn git_file_contributions_per_author(identity: GitIdentity) -> Vec<GitFileContri
             })
             .collect()
     } else {
+        // TODO: String::from_utf8_lossy(&output.stderr).into_owned()
         println!(
             "An error has occured while attempting to execute `git log` with author {}.",
             identity.email
@@ -370,6 +375,7 @@ fn git_author_frequency() -> HashMap<String, (GitIdentity, usize)> {
 
         author_contribution_frequency
     } else {
+        // TODO: String::from_utf8_lossy(&output.stderr).into_owned()
         println!(
             "An error has occured.  It is likely that you aren't in a git repository, or you may not have `git` installed."
         );

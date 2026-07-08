@@ -1,14 +1,13 @@
-use super::commit::{GitCommit, git_log};
-use super::hash::HashFormat;
-use super::opts::GitLogOptions;
+use crate::{
+    commit::{GitCommit, git_log},
+    hash::HashFormat,
+    opts::GitLogOptions,
+};
 use colored::*;
-use lazy_static::lazy_static;
-use std::collections::HashMap;
+use std::{collections::HashMap, sync::LazyLock};
 
-lazy_static! {
-    // En dash
-    static ref INFO_SEP_CHAR: char = char::from_u32(0x2013).unwrap();
-}
+// En-dash
+static INFO_SEP_CHAR: LazyLock<char> = LazyLock::new(|| char::from_u32(0x2014).unwrap());
 
 trait Format {
     fn format_parts(&self, opts: &GitLogOptions) -> HashMap<&str, String>;

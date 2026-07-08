@@ -1,4 +1,4 @@
-use super::{
+use crate::{
     branch::current_branch,
     opts::GitLogOptions,
     repo::{current_repository, discover_repository},
