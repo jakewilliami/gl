@@ -46,7 +46,10 @@ impl StatusKey for GitChange {
         match self {
             GitChange::Modification { status, .. } => match status {
                 EntryStatus::Change(_) => 0,
-                EntryStatus::Conflict(_) => 1,
+                EntryStatus::Conflict {
+                    summary: _,
+                    entries: _,
+                } => 1,
                 EntryStatus::NeedsUpdate(_) => 2,
                 EntryStatus::IntentToAdd => 3,
             },
@@ -131,7 +134,10 @@ impl<T, U> ChangeCodeShort for EntryStatus<T, U> {
     fn code(&self) -> ColoredString {
         match self {
             EntryStatus::Change(_) => format!("{:>2}", "M").red(),
-            EntryStatus::Conflict(_) => format!("{:>2}", "UU").red(),
+            EntryStatus::Conflict {
+                summary: _,
+                entries: _,
+            } => format!("{:>2}", "UU").red(),
             // TODO: I think somewhere here is an M variant that's green and left aligned, after resolving merge conflict
             // TODO: Instead of panicing I should warn and exit
             EntryStatus::NeedsUpdate(_) => todo!(),

@@ -43,9 +43,11 @@ impl GitCommit {
 
         // Get author info
         // TODO: allow GitIdentity by author rather than committer
-        let author = commit_ref.author.actor();
-        let committer = commit_ref.committer();
+        // TODO: better error handling
+        let author = commit_ref.author().unwrap();
+        let committer = commit_ref.committer().unwrap();
 
+        // TODO: why are we debugging here?
         if commit.short_id().unwrap().to_string() == *"8d38e3e" {
             dbg!(&commit);
             dbg!(&commit_ref);
@@ -141,7 +143,7 @@ pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit>
     let mut refs = HashMap::<String, Vec<String>>::new();
     for r in platform.all().unwrap().filter_map(Result::ok) {
         // let target_id = r.clone().target().try_id().map(ToOwned::to_owned);
-        let peeled_id = r.clone().peel_to_id_in_place().ok().unwrap();
+        let peeled_id = r.clone().peel_to_id().ok().unwrap();
         refs.entry(peeled_id.to_hex().to_string())
             .or_default()
             .push(r.inner.name.shorten().to_string());

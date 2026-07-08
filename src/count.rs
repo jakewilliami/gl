@@ -178,7 +178,8 @@ fn commit_count_core(rng: Option<TimeRange>) -> usize {
 
                 // Filter between the time frame
                 if let Some(rng) = &rng {
-                    let committer = commit_ref.committer();
+                    // TODO: better error handling
+                    let committer = commit_ref.committer().unwrap();
                     let time = gix::date::Time::from_str(committer.time).unwrap();
                     if rng.start > time.seconds || time.seconds > rng.end {
                         return false;
