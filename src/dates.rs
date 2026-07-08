@@ -1,5 +1,6 @@
 use crate::{
-    commit::{GitCommit, HashFormat, git_log_iter},
+    commit::{GitCommit, git_log_iter},
+    hash::HashFormat,
     opts::GitLogOptions,
 };
 use chrono::NaiveDate;

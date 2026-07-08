@@ -13,9 +13,7 @@ $ ./gl -h
 
 ## Configure for yourself
 
-This tool is very much made for myself.  It started as a Bash alias when I first started programming, in August, 2019, and then turned into a [Bash script](https://github.com/jakewilliami/scripts/tree/master/bash/gl), and then [a small Rust project](https://github.com/jakewilliami/scripts/tree/master/rust/gl/), and now this.  While I never intended this tool to be used by others, I figured I should allow some customisability if anybody else wants to use it.
-
-Anything you need to change to get it working for you should be in the [config file](./src/config.rs).
+This tool is very much made for myself.  However, I have tried to keep things as configurable as possible.  Anything you need to change to get it working for you should be in the [config file](./src/config.rs).
 
 ## Where to store
 
@@ -47,3 +45,7 @@ $ RUSTFLAGS="-C symbol-mangling-version=v0" cargo build  # Do not specify --rele
 
 $  samply record ./target/debug/gl <args...> > /dev/null
 ```
+
+## History
+
+It started as a Bash alias when I first started programming, in August, 2019, and then turned into a [Bash script](https://github.com/jakewilliami/scripts/tree/98a327a/bash/gl), and then [a small Rust project](https://github.com/jakewilliami/scripts/tree/b45a4557/rust/gl/), and now this.  While I never intended this tool to be used by others, I figured I should allow some customisability if anybody else wants to use it.

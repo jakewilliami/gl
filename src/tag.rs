@@ -2,10 +2,12 @@ use crate::{
     commit::{GitCommit, git_log_iter, has_commits},
     opts::TagFormat,
     origin::remote_origin_url,
+    repo::discover_repository,
     version::{self, AsVersion, Bump, NextVersion, Version},
 };
 use anyhow::{Error, anyhow};
 use dialoguer::{Confirm, Input};
+use gix::{object, refs::transaction::PreviousValue};
 use itertools::Itertools;
 use regex::Regex;
 use std::{
@@ -17,6 +19,7 @@ use std::{
 
 const MAX_COMMIT_LEN: usize = 69;
 static META_SEP_CHAR: LazyLock<char> = LazyLock::new(|| char::from_u32(0x2E3A).unwrap());
+static INFO_SEP_CHAR: LazyLock<char> = LazyLock::new(|| char::from_u32(0x2014).unwrap());
 static TAG_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(&format!(
         r"^(?P<raw>(?:(?P<first>(?P<version>(?P<tag>{}))){})?(?P<rest>(?:(?P<description>.+?)(?:\s+(?P<trailingver>{}))?))?)$",
@@ -200,8 +203,8 @@ fn prompt_tag_version(
 
             // Validation step 3: check that the tag given by the user is sequential given
             //   the previous tag
-            if let Some(suggested) = latest_tag.version.next_version(v) {
-                if !Confirm::new()
+            if let Some(suggested) = latest_tag.version.next_version(v)
+                && !Confirm::new()
                     .with_prompt(format!(
                         "Not a sequential bump (expected {}), continue anyway?",
                         suggested
@@ -209,27 +212,24 @@ fn prompt_tag_version(
                     .default(false)
                     .interact()
                     .unwrap()
-                {
-                    return Err(String::from("enter a different version"));
-                }
+            {
+                return Err(String::from("enter a different version"));
             }
 
             // Validation step 4: check if the tag given by the user aligns with the commit
             //   message, if the commit message is in a tag-like format
-            if let Ok(commit_tag) = Tag::try_from(latest_commit) {
-                if commit_tag.version != *v {
-                    if !Confirm::new()
-                        .with_prompt(format!(
-                            "Latest commit is for {}, not {}, continue anyway?",
-                            commit_tag.version, v
-                        ))
-                        .default(false)
-                        .interact()
-                        .unwrap()
-                    {
-                        return Err(String::from("enter a different version"));
-                    }
-                }
+            if let Ok(commit_tag) = Tag::try_from(latest_commit)
+                && commit_tag.version != *v
+                && !Confirm::new()
+                    .with_prompt(format!(
+                        "Latest commit is for {}, not {}, continue anyway?",
+                        commit_tag.version, v
+                    ))
+                    .default(false)
+                    .interact()
+                    .unwrap()
+            {
+                return Err(String::from("enter a different version"));
             }
 
             // If we got here, then the tag should be good enough
@@ -263,23 +263,20 @@ fn prompt_description(tag_version: &Version, latest_commit: &GitCommit) -> Strin
             .to_owned();
 
         // Check if description matches the commit message
-        if let Ok(commit_tag) = Tag::try_from(latest_commit) {
-            if let Some(commit_desc) = &commit_tag.description {
-                if &input != commit_desc {
-                    if !Confirm::new()
-                        .with_prompt(format!(
-                            "Message differs from latest commit message ({:?}), continue anyway?",
-                            commit_desc
-                        ))
-                        .default(false)
-                        .interact()
-                        .unwrap()
-                    {
-                        initial = input;
-                        continue;
-                    }
-                }
-            }
+        if let Ok(commit_tag) = Tag::try_from(latest_commit)
+            && let Some(commit_desc) = &commit_tag.description
+            && &input != commit_desc
+            && !Confirm::new()
+                .with_prompt(format!(
+                    "Message differs from latest commit message ({:?}), continue anyway?",
+                    commit_desc
+                ))
+                .default(false)
+                .interact()
+                .unwrap()
+        {
+            initial = input;
+            continue;
         }
 
         let msg = Tag::with_description(tag_version, &input).message();
@@ -329,62 +326,75 @@ pub fn get_tags(fmt: TagFormat) {
         match fmt {
             TagFormat::Short => println!("{tag}"),
             TagFormat::Long => match &tag.description {
-                Some(desc) => println!("{tag} - {desc}"),
+                Some(desc) => println!("{tag} {} {desc}", *INFO_SEP_CHAR),
                 None => println!("{tag}"),
             },
         }
     }
 }
 
+// TODO: support --rev for tags
 fn tags() -> Vec<Tag> {
-    let mut cmd = Command::new("git");
-    cmd.arg("tag");
-    cmd.arg("--list");
-    // Sort in reverse order by tag name, which is a version number
-    //   <https://stackoverflow.com/a/1064505>
-    cmd.arg("--sort=-version:refname");
-    // Include tag message as well
-    //   <https://stackoverflow.com/a/59356030>
-    cmd.arg(format!(
-        "--format=%(refname:short){}%(subject)",
-        *META_SEP_CHAR
-    ));
+    let repo = discover_repository().unwrap();
+    let platform = repo.references().unwrap();
 
-    let output = cmd
-        .stdout(Stdio::piped())
-        .output()
-        .expect("Failed to execute `git tag`");
+    // Adapted from:
+    //   https://github.com/GitoxideLabs/gitoxide/blob/19bdf8a7/gitoxide-core/src/repository/tag.rs#L51-L54
+    let mut tags: Vec<Tag> = Vec::new();
+    for mut reference in platform.tags().unwrap().flatten() {
+        let tag = reference.peel_to_tag();
+        let tag_ref = tag.as_ref().map(gix::Tag::decode).unwrap();
 
-    if output.status.success() {
-        let tags = String::from_utf8_lossy(&output.stdout).into_owned();
-        // TODO: or do we want to _warn_ on non-parseable tags?
-        tags.lines()
-            .map(|s| s.parse::<Tag>().expect("failed to parse Tag"))
-            .collect()
-    } else {
-        // TODO: String::from_utf8_lossy(&output.stderr).into_owned()
-        vec![]
+        // Construct crate::Tag from relevant tag information
+        if let Ok(tag_ref) = tag_ref {
+            let name = reference.name().shorten();
+            // We must only take the first like (equivalent to %(subject) format)
+            // TODO: why so many intermediate values from BStr -> String -> &str?
+            let message = tag_ref.message.to_owned().to_string();
+            let subject = message.lines().next().unwrap().trim();
+
+            // Construct parseable format, equivalent to --format=%(refname:short){}%(subject)
+            // TODO: surely now that we are using a git lib we can bypass the janky parsing
+            tags.push(
+                format!("{name}{}{subject}", *META_SEP_CHAR)
+                    .as_str()
+                    .parse::<Tag>()
+                    .unwrap(),
+            );
+        }
     }
+
+    // Reverse order by version
+    tags.sort_by(|a, b| b.version.cmp(&a.version));
+
+    tags
 }
 
 fn create_tag(tag: &Tag) {
-    let mut cmd = Command::new("git");
-    cmd.arg("tag");
-    cmd.arg("--annotate");
-    cmd.arg(tag.version.to_string());
-    cmd.arg(format!("--message={}", tag.message()));
+    let repo = discover_repository().unwrap();
+    let head_id = repo.head_id().unwrap();
 
-    let output = cmd
-        .stdout(Stdio::piped())
-        .output()
-        .expect("Failed to execute `git tag`");
+    let tagger = repo
+        .committer()
+        .transpose()
+        .unwrap()
+        .expect("Could not infer committer identity");
 
-    if !output.status.success() {
-        let err = String::from_utf8_lossy(&output.stderr).into_owned();
+    let result = repo.tag(
+        tag.version.to_string(),
+        head_id,
+        object::Kind::Commit,
+        Some(tagger),
+        tag.message(),
+        PreviousValue::MustNotExist,
+    );
+
+    if let Err(err) = result {
         eprintln!("[ERROR] {err}");
     }
 }
 
+// TODO: pushing is not yet supported through gix
 fn push_tag(tag: &Tag) {
     let mut cmd = Command::new("git");
     cmd.arg("push");

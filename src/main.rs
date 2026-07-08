@@ -4,8 +4,10 @@ mod commit;
 mod config;
 mod contributions;
 mod count;
+mod date; // TODO: do we want to merge these files?
 mod dates;
 mod env;
+mod hash;
 mod identity;
 mod languages;
 mod log;
@@ -52,7 +54,7 @@ fn main() {
         languages::print_language_summary(top_n, language_summary, &opts);
     } else if cli.group.status.is_some() {
         // Show status of git repo
-        status::get_git_status(&cli.group.status, &opts);
+        status::display_git_status(&cli.group.status, &opts);
     // } else if cli.group.global_status {
     //     // Show statuses of predefined git repos (not yet implemented)
     //     todo!()
@@ -65,10 +67,10 @@ fn main() {
         }
     } else if cli.group.local_branches {
         // Show local branches
-        branch::get_branch_names(branch::BranchListings::Local, &opts);
+        branch::display_branches(branch::BranchListings::Local, &opts);
     } else if cli.group.remote_branches {
         // Show remote branches
-        branch::get_branch_names(branch::BranchListings::Remotes, &opts);
+        branch::display_branches(branch::BranchListings::Remotes, &opts);
     } else if cli.group.remote_origin {
         // Show remote origin URL
         origin::get_remote_origin_url();
