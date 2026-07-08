@@ -7,6 +7,7 @@ use crate::{
 };
 use anyhow::{Error, anyhow};
 use dialoguer::{Confirm, Input};
+use gix::{object, refs::transaction::PreviousValue};
 use itertools::Itertools;
 use regex::Regex;
 use std::{
@@ -370,23 +371,30 @@ fn tags() -> Vec<Tag> {
 }
 
 fn create_tag(tag: &Tag) {
-    let mut cmd = Command::new("git");
-    cmd.arg("tag");
-    cmd.arg("--annotate");
-    cmd.arg(tag.version.to_string());
-    cmd.arg(format!("--message={}", tag.message()));
+    let repo = discover_repository().unwrap();
+    let head_id = repo.head_id().unwrap();
 
-    let output = cmd
-        .stdout(Stdio::piped())
-        .output()
-        .expect("Failed to execute `git tag`");
+    let tagger = repo
+        .committer()
+        .transpose()
+        .unwrap()
+        .expect("Could not infer committer identity");
 
-    if !output.status.success() {
-        let err = String::from_utf8_lossy(&output.stderr).into_owned();
+    let result = repo.tag(
+        tag.version.to_string(),
+        head_id,
+        object::Kind::Commit,
+        Some(tagger),
+        tag.message(),
+        PreviousValue::MustNotExist,
+    );
+
+    if let Err(err) = result {
         eprintln!("[ERROR] {err}");
     }
 }
 
+// TODO: pushing is not yet supported through gix
 fn push_tag(tag: &Tag) {
     let mut cmd = Command::new("git");
     cmd.arg("push");
