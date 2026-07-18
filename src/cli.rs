@@ -19,16 +19,6 @@ use clap::{ArgAction, Args, Parser, Subcommand, crate_authors, crate_name, crate
 ///
 /// By default (i.e., without any arguments), it will print the last 10 commits nicely.
 pub struct Cli {
-    /// Display git log with absolute commit dates
-    #[arg(
-        short = 'a',
-        long = "abs",
-        action = ArgAction::SetTrue,
-        num_args = 0,
-        default_value_t = false,
-    )]
-    pub absolute: bool,
-
     /// Display the *least* recent logs (reverse order)
     #[arg(
         long = "rev",
@@ -38,13 +28,47 @@ pub struct Cli {
     )]
     pub reverse: bool,
 
+    #[clap(flatten)]
+    pub log: LogGroup,
+
+    #[clap(flatten)]
+    pub dispatch: DispatchGroup,
+}
+
+#[derive(Args)]
+pub struct LogGroup {
+    /// Given a number, will print the last n commits nicely
+    ///
+    /// By default, the programme will print the last 10 commits.  Can use with --rev to show least recent logs first.  Can also use --all to show all logs
+    #[arg(
+        // TODO: as well as -n, we should also be able to do -10, -100, -3, etc
+        id = "log_count",
+        action = ArgAction::Set,
+        num_args = 1,
+        value_name = "n commits",
+        default_value_t = config::DEFAULT_TOP_N_LOG,
+        conflicts_with = "dispatch",
+    )]
+    pub count: usize,
+
+    /// Display git log with absolute commit dates
+    #[arg(
+        short = 'a',
+        long = "abs",
+        action = ArgAction::SetTrue,
+        num_args = 0,
+        default_value_t = false,
+        conflicts_with = "dispatch",
+    )]
+    pub absolute: bool,
+
     /// Display all logs
     #[arg(
         long = "all",
         action = ArgAction::SetTrue,
         num_args = 0,
         default_value_t = false,
-        conflicts_with = "log_number",
+        conflicts_with = "dispatch",
     )]
     pub all: bool,
 
@@ -53,6 +77,7 @@ pub struct Cli {
         long = "author",
         action = ArgAction::Append,
         num_args = 1..=std::usize::MAX,
+        conflicts_with = "dispatch",
     )]
     pub authors: Vec<String>,
 
@@ -61,32 +86,23 @@ pub struct Cli {
         long = "grep",
         action = ArgAction::Append,
         num_args = 1..=std::usize::MAX,
+        conflicts_with = "dispatch",
     )]
     pub grep: Vec<String>,
-
-    #[clap(flatten)]
-    pub group: Group,
 }
 
+// This group allows us to switch between different functionalities.  The default
+// functionality of this CLI is of course printing the recent git commits (git log),
+// but we can change the functional output by specifying alternative flags, listed
+// below.
+//
 // We only want to allow one functional check at a time.  The following group,
 // which is flattened in the main Cli struct, should provide such functionality
 //
 //   https://stackoverflow.com/a/76315811
 #[derive(Args)]
-#[group(multiple = false)]
-pub struct Group {
-    /// Given a number, will print the last n commits nicely
-    ///
-    /// By default, the programme will print the last 10 commits.  Can use with --rev to show least recent logs first.  Can also use --all to show all logs
-    #[arg(
-        // TODO: as well as -n, we should also be able to do -10, -100, -3, etc
-        action = ArgAction::Set,
-        num_args = 1,
-        value_name = "n commits",
-        default_value_t = config::DEFAULT_TOP_N_LOG,
-    )]
-    pub log_number: usize,
-
+#[group(id = "dispatch", multiple = false)]
+pub struct DispatchGroup {
     /// Prints language breakdown in present repository
     ///
     /// Will print only top n languages if given value (optional).  Defaults to displaying all languages (you can also specify n = 0 for this behaviour)
@@ -255,12 +271,12 @@ pub struct Group {
     //    bump patch version)
     /// List tags
     ///
-    /// List all of the tags in the git repository.  By default, the short tag format is used.
+    /// List all of the tags in the git repository.  By default, the long tag format is used.
     #[arg(
         short = 't',
         long = "tags",
         value_name = "format",
-        default_missing_value = "short",
+        default_missing_value = "long",
         num_args = 0..=1,
     )]
     pub tags: Option<TagFormat>,

@@ -1,6 +1,6 @@
 use crate::{
     commit::{GitCommit, HashFormat, git_log_iter},
-    opts::GitLogOptions,
+    opts::{GitOptions, LogOptions},
 };
 use chrono::NaiveDate;
 
@@ -30,9 +30,12 @@ pub fn find_first_commit_before_date(date: NaiveDate) {
 fn find_first_commit_before_date_internal(date: NaiveDate) -> Option<GitCommit> {
     let mut logs_iter = git_log_iter(
         Some(1),
-        Some(&GitLogOptions {
-            all: true,
+        Some(&GitOptions {
             reverse: true,
+            log: LogOptions {
+                all: true,
+                ..Default::default()
+            },
             ..Default::default()
         }),
     )

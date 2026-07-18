@@ -1,4 +1,4 @@
-use crate::opts::GitLogOptions;
+use crate::opts::GitOptions;
 use std::process::{Command, Stdio};
 
 pub enum BranchListings {
@@ -6,7 +6,7 @@ pub enum BranchListings {
     Remotes,
 }
 
-pub fn get_branch_names(bt: BranchListings, opts: &GitLogOptions) {
+pub fn get_branch_names(bt: BranchListings, opts: &GitOptions) {
     let branch_names: Option<String> = match bt {
         BranchListings::Local => branch_names(opts),
         BranchListings::Remotes => remote_branches(opts),
@@ -56,7 +56,7 @@ pub fn current_branch() -> Option<String> {
     }
 }
 
-fn branch_names(opts: &GitLogOptions) -> Option<String> {
+fn branch_names(opts: &GitOptions) -> Option<String> {
     let mut cmd = Command::new("git");
     cmd.arg("branch");
     if opts.colour {
@@ -78,7 +78,7 @@ fn branch_names(opts: &GitLogOptions) -> Option<String> {
     }
 }
 
-fn remote_branches(opts: &GitLogOptions) -> Option<String> {
+fn remote_branches(opts: &GitOptions) -> Option<String> {
     let mut cmd = Command::new("git");
     cmd.arg("branch");
     if opts.colour {

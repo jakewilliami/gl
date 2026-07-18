@@ -1,4 +1,4 @@
-use crate::{branch, config::SHORT_HASH_LENGTH, count, identity::GitIdentity, opts::GitLogOptions};
+use crate::{branch, config::SHORT_HASH_LENGTH, count, identity::GitIdentity, opts::GitOptions};
 use chrono::{DateTime, Local, NaiveDate};
 use regex::Regex;
 use std::{
@@ -85,7 +85,7 @@ pub struct GitLogIter {
     #[allow(dead_code)]
     log_data: Arc<String>,
     lines: std::str::Lines<'static>,
-    opts: GitLogOptions,
+    opts: GitOptions,
 }
 
 impl Iterator for GitLogIter {
@@ -104,7 +104,7 @@ impl Iterator for GitLogIter {
                     date: CommitDate {
                         abs: {
                             let date_str = re_match.name("dateabs")?.as_str();
-                            if self.opts.relative {
+                            if self.opts.log.relative {
                                 DateTime::parse_from_rfc2822(date_str).unwrap().into()
                             } else {
                                 // TODO: this is slightly wrong, as it doesn't account for
@@ -143,7 +143,7 @@ impl Iterator for GitLogIter {
 
 pub fn git_log_iter(
     n: Option<usize>,
-    opts: Option<&GitLogOptions>,
+    opts: Option<&GitOptions>,
 ) -> Box<dyn Iterator<Item = GitCommit>> {
     let opts = opts.cloned().unwrap_or_default();
     let log_data = Arc::new(git_log_str(n, &opts));
@@ -166,11 +166,11 @@ pub fn git_log_iter(
     }
 }
 
-pub fn git_log(n: Option<usize>, opts: Option<&GitLogOptions>) -> Vec<GitCommit> {
+pub fn git_log(n: Option<usize>, opts: Option<&GitOptions>) -> Vec<GitCommit> {
     git_log_iter(n, opts).collect()
 }
 
-fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
+fn git_log_str(n: Option<usize>, opts: &GitOptions) -> String {
     let mut cmd = Command::new("git");
     cmd.arg("log");
     cmd.arg("--color");
@@ -187,7 +187,7 @@ fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
         String::from("%ae").quote(),
     ));
 
-    if opts.relative {
+    if opts.log.relative {
         // Even though we don't explicitly print the full date when we show the relative commit time, it is useful to have the RFC-2822 date format for parsing in the GitCommit
         cmd.arg("--date=rfc");
     } else {
@@ -201,12 +201,12 @@ fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
     //   https://stackoverflow.com/a/22971024/
     //
     // But it seems to work fine with multiple arguments
-    for author in &opts.authors {
+    for author in &opts.log.filter.authors {
         // cmd.arg(format!("--author=\"{author}\""));
         cmd.arg("--author").arg(author);
     }
 
-    for needle in &opts.needles {
+    for needle in &opts.log.filter.needles {
         // cmd.arg(format!("--grep=\"{needle}\""));
         cmd.arg("--grep").arg(needle);
     }
@@ -214,7 +214,7 @@ fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
     cmd.arg("--abbrev-commit");
 
     if let Some(n) = n
-        && !opts.all
+        && !opts.log.all
     {
         // If n is defined, restrict the log to only show n of them (only if we don't want to show all logs)
         cmd.arg(format!("-n {n}"));
@@ -244,13 +244,13 @@ fn git_log_str(n: Option<usize>, opts: &GitLogOptions) -> String {
     }
 }
 
-fn log_fmt_str(opts: &GitLogOptions) -> String {
+fn log_fmt_str(opts: &GitOptions) -> String {
     // TODO: add option for commit format H (long hash)
     let commit = colourise_log_fmt("h", Some("bold yellow"), None, None, opts);
     let branch_tag = colourise_log_fmt("d", Some("bold green"), Some("-"), None, opts);
     let msg = colourise_log_fmt("s", None, None, Some(""), opts);
     let time = colourise_log_fmt(
-        if opts.relative { "cr" } else { "cd" },
+        if opts.log.relative { "cr" } else { "cd" },
         Some("bold red"),
         None,
         Some("()"),
@@ -265,7 +265,7 @@ fn colourise_log_fmt(
     colour: Option<&str>,
     prefix: Option<&str>,
     enclosing_chars: Option<&str>,
-    opts: &GitLogOptions,
+    opts: &GitOptions,
 ) -> String {
     let prefix = prefix.unwrap_or("");
     let (enclosing_start, enclosing_end) = get_enclosing(enclosing_chars);

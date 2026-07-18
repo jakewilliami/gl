@@ -1,17 +1,17 @@
 use crate::{
     commit::{GitCommit, git_log},
     config,
-    opts::GitLogOptions,
+    opts::GitOptions,
 };
 use colored::*;
 use regex::Regex;
 
 trait Format {
-    fn pretty(&self, opts: &GitLogOptions) -> String;
+    fn pretty(&self, opts: &GitOptions) -> String;
 }
 
 impl Format for GitCommit {
-    fn pretty(&self, opts: &GitLogOptions) -> String {
+    fn pretty(&self, opts: &GitOptions) -> String {
         let re_named = Regex::new(r"<(?P<author>[^>]*)>").unwrap();
         let re = Regex::new(r"<([^>]*)>").unwrap();
         // TODO: in future, instead of using raw, we can add colours ourself
@@ -45,7 +45,7 @@ impl Format for GitCommit {
     }
 }
 
-pub fn display_git_log(n: usize, opts: &GitLogOptions) {
+pub fn display_git_log(n: usize, opts: &GitOptions) {
     let logs: Vec<GitCommit> = git_log(Some(n), Some(opts));
 
     for log in logs {

@@ -1,4 +1,4 @@
-use crate::{branch::current_branch, opts::GitLogOptions, repo::current_repository};
+use crate::{branch::current_branch, opts::GitOptions, repo::current_repository};
 use chrono::{DateTime, Duration, Local, NaiveTime};
 use colored::*;
 use std::process::{Command, Output, Stdio};
@@ -8,7 +8,7 @@ use std::process::{Command, Output, Stdio};
 // let today: Date<Local> = Local::today();
 // const yesterday = today - Duration::days(1);
 
-pub fn get_commit_count(input: &str, opts: &GitLogOptions) {
+pub fn get_commit_count(input: &str, opts: &GitOptions) {
     // determine commit count
     let commit_count_val: usize;
 
@@ -67,7 +67,7 @@ pub fn get_commit_count(input: &str, opts: &GitLogOptions) {
     }
 }
 
-pub fn get_commit_count_total(opts: &GitLogOptions) {
+pub fn get_commit_count_total(opts: &GitOptions) {
     // determine commit count
     let commit_count_val = commit_count();
 

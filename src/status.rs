@@ -1,11 +1,11 @@
-use crate::opts::GitLogOptions;
+use crate::opts::GitOptions;
 use std::{
     ffi::OsString,
     path::PathBuf,
     process::{Command, Stdio},
 };
 
-pub fn get_git_status(dir: &Option<String>, opts: &GitLogOptions) {
+pub fn get_git_status(dir: &Option<String>, opts: &GitOptions) {
     let given_dir: PathBuf = if (dir).is_none() {
         std::env::current_dir().unwrap()
     } else {
@@ -15,7 +15,7 @@ pub fn get_git_status(dir: &Option<String>, opts: &GitLogOptions) {
     println!("{}", status.trim_end())
 }
 
-fn git_status(dir: &OsString, opts: &GitLogOptions) -> String {
+fn git_status(dir: &OsString, opts: &GitOptions) -> String {
     let mut cmd = Command::new("git");
     if opts.colour {
         cmd.arg("-c");

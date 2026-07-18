@@ -1,4 +1,4 @@
-use crate::{opts::GitLogOptions, repo};
+use crate::{opts::GitOptions, repo};
 use colored::*;
 use colorsys::Rgb;
 use hyperpolyglot::{Detection, Language, get_language_breakdown};
@@ -79,7 +79,7 @@ pub fn construct_language_summary() -> Vec<LanguageSummary> {
 pub fn print_language_summary(
     top_n: usize,
     languages_summary: Vec<LanguageSummary>,
-    opts: &GitLogOptions,
+    opts: &GitOptions,
 ) {
     for language_summary in languages_summary.iter().take(top_n) {
         // Check if the language was present in the database

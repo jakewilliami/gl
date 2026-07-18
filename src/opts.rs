@@ -1,28 +1,45 @@
 use clap::ValueEnum;
 
 #[derive(Clone)]
-pub struct GitLogOptions {
-    pub relative: bool, // relative commit dates
+pub struct GitOptions {
     pub colour: bool,
     pub reverse: bool,
+    pub log: LogOptions,
+}
+
+impl Default for GitOptions {
+    fn default() -> Self {
+        Self {
+            colour: true,
+            reverse: false,
+            log: LogOptions::default(),
+        }
+    }
+}
+
+#[derive(Clone)]
+pub struct LogOptions {
+    pub relative: bool, // relative commit dates
     pub all: bool,
 
     // Filter commits by author or grep
-    pub authors: Vec<String>,
-    pub needles: Vec<String>,
+    pub filter: LogFilterOptions,
 }
 
-impl Default for GitLogOptions {
+impl Default for LogOptions {
     fn default() -> Self {
         Self {
             relative: true,
-            colour: true,
-            reverse: false,
             all: false,
-            authors: Vec::new(),
-            needles: Vec::new(),
+            filter: LogFilterOptions::default(),
         }
     }
+}
+
+#[derive(Clone, Default)]
+pub struct LogFilterOptions {
+    pub authors: Vec<String>,
+    pub needles: Vec<String>,
 }
 
 #[derive(Clone, ValueEnum)]
