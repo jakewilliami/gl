@@ -19,12 +19,35 @@ use clap::{ArgAction, Args, Parser, Subcommand, crate_authors, crate_name, crate
 ///
 /// By default (i.e., without any arguments), it will print the last 10 commits nicely.
 pub struct Cli {
-    /// Display the *least* recent logs (reverse order)
+    /// Display *least* recent items first (reverse order)
+    ///
+    /// Currently, this option is only supported for the base log/commit listings and tags
     #[arg(
         long = "rev",
         action = ArgAction::SetTrue,
         num_args = 0,
         default_value_t = false,
+        // NOTE: if you add a new option to DispatchGroup, add it here too, unless you
+        //   explicitly implement support for `--rev`.
+        //
+        // It would be convenient if we could do something like:
+        //   conflicts_with_all_except = ["LogGroup", "tags"]
+        conflicts_with_all = [
+            "languages",
+            "status",
+            "branch",
+            "local_branches",
+            "remote_branches",
+            "remote_origin",
+            "repo_name",
+            "commit_count",
+            "commit_count_at",
+            "author_commit_counts",
+            "author_contrib_stats",
+            "contrib_graph",
+            "count",
+            "date",
+        ],
     )]
     pub reverse: bool,
 
@@ -62,7 +85,7 @@ pub struct LogGroup {
     )]
     pub absolute: bool,
 
-    /// Display all logs
+    /// Display all logs (not truncated)
     #[arg(
         long = "all",
         action = ArgAction::SetTrue,
@@ -97,9 +120,10 @@ pub struct LogGroup {
 // below.
 //
 // We only want to allow one functional check at a time.  The following group,
-// which is flattened in the main Cli struct, should provide such functionality
-//
+// which is flattened in the main Cli struct, should provide such functionality:
 //   https://stackoverflow.com/a/76315811
+//
+// NOTE: if you add a new option here, also update conflicts_with_all on --rev
 #[derive(Args)]
 #[group(id = "dispatch", multiple = false)]
 pub struct DispatchGroup {

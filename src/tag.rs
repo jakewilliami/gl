@@ -344,7 +344,13 @@ fn open_release_urls(latest_commit: &GitCommit) {
 }
 
 pub fn get_tags(opts: &GitOptions) {
-    for tag in tags() {
+    let mut tags = tags();
+
+    if opts.reverse {
+        tags.reverse()
+    }
+
+    for tag in tags {
         match opts.tag.fmt {
             TagFormat::Short => println!("{}", tag.version),
             TagFormat::Long => println!("{}", tag.pretty(opts)),
