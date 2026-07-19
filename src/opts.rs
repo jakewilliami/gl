@@ -1,4 +1,4 @@
-use clap::ValueEnum;
+use crate::tag::TagFormat;
 
 #[derive(Clone)]
 pub struct GitOptions {
@@ -47,11 +47,4 @@ pub struct LogFilterOptions {
 #[derive(Clone, Default)]
 pub struct TagOptions {
     pub fmt: TagFormat,
-}
-
-#[derive(Clone, Default, ValueEnum)]
-pub enum TagFormat {
-    Short,
-    #[default]
-    Long,
 }

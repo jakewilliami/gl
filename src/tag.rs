@@ -1,16 +1,18 @@
 use crate::{
     commit::{GitCommit, git_log_iter, has_commits},
     display::Format,
-    opts::{GitOptions, TagFormat},
+    opts::GitOptions,
     origin::remote_origin_url,
     version::{self, AsVersion, Bump, NextVersion, Version},
 };
 use anyhow::{Error, anyhow};
+use clap::ValueEnum;
 use colored::*;
 use dialoguer::{Confirm, Input};
 use itertools::Itertools;
 use regex::Regex;
 use std::{
+    collections::HashSet,
     fmt,
     process::{Command, Stdio},
     str::FromStr,
@@ -41,6 +43,14 @@ impl Default for Tag {
             description: None,
         }
     }
+}
+
+#[derive(Clone, Default, ValueEnum, PartialEq)]
+pub enum TagFormat {
+    Short,
+    #[default]
+    Long,
+    Tree,
 }
 
 // TODO: should we make all of the worker functions impl of Tag?
@@ -350,10 +360,212 @@ pub fn get_tags(opts: &GitOptions) {
         tags.reverse()
     }
 
-    for tag in tags {
+    if opts.tag.fmt == TagFormat::Tree {
+        display_tags_tree(&tags, opts);
+        return;
+    }
+
+    for tag in &tags {
         match opts.tag.fmt {
             TagFormat::Short => println!("{}", tag.version),
             TagFormat::Long => println!("{}", tag.pretty(opts)),
+            TagFormat::Tree => unreachable!(),
+        }
+    }
+}
+
+// Some tags are "orphans" in the sense that they have no parents.  For example,
+// v0.1.0 might exist at the start of a repository, but v0.0.0 might not.  These
+// are phantom tags; they don't really exist but we want to display them for the
+// tree output.
+fn insert_phantom_trunks(tags: &[Tag]) -> Vec<(Tag, bool)> {
+    let mut result: Vec<(Tag, bool)> = vec![];
+    let mut seen_major_trunks: HashSet<u64> = HashSet::new();
+    let mut seen_minor_trunks: HashSet<(u64, u64)> = HashSet::new();
+
+    for tag in tags {
+        result.push((tag.clone(), false));
+
+        let major_trunk_version = Version::new(tag.version.major, 0, 0);
+        if tag.version != major_trunk_version
+            && !tags.iter().any(|t| t.version == major_trunk_version)
+            && !seen_major_trunks.contains(&tag.version.major)
+        {
+            result.push((Tag::with_version(&major_trunk_version), true));
+            seen_major_trunks.insert(tag.version.major);
+        }
+
+        let minor_trunk_version = Version::new(tag.version.major, tag.version.minor, 0);
+        if tag.version != minor_trunk_version
+            && !tags.iter().any(|t| t.version == minor_trunk_version)
+            && !seen_minor_trunks.contains(&(tag.version.major, tag.version.minor))
+        {
+            result.push((Tag::with_version(&minor_trunk_version), true));
+            seen_minor_trunks.insert((tag.version.major, tag.version.minor));
+        }
+    }
+    result
+}
+
+type TagGroups = Vec<Vec<Vec<(Tag, bool)>>>;
+
+// In order to print tags in a tree structure, it is much more convenient to group them
+// into a logical nesting so that groups are easier to handle
+fn build_major_groups(tags_with_phantoms: &[(Tag, bool)]) -> TagGroups {
+    let mut major_groups: TagGroups = vec![];
+
+    for (tag, is_phantom) in tags_with_phantoms {
+        let needs_new_major = major_groups
+            .last()
+            .and_then(|mg| mg.first())
+            .and_then(|minor_g| minor_g.first())
+            .map(|(t, _)| t.version.major != tag.version.major)
+            .unwrap_or(true);
+
+        if needs_new_major {
+            major_groups.push(vec![vec![(tag.clone(), *is_phantom)]]);
+        } else {
+            let major_group = major_groups.last_mut().unwrap();
+            let needs_new_minor = major_group
+                .last()
+                .and_then(|mg| mg.first())
+                .map(|(t, _)| t.version.minor != tag.version.minor)
+                .unwrap_or(true);
+
+            if needs_new_minor {
+                major_group.push(vec![(tag.clone(), *is_phantom)]);
+            } else {
+                major_group
+                    .last_mut()
+                    .unwrap()
+                    .push((tag.clone(), *is_phantom));
+            }
+        }
+    }
+
+    // Sort major groups oldest-first (descending major version)
+    major_groups.sort_by(|a, b| {
+        let a_ver = &a[0][0].0.version;
+        let b_ver = &b[0][0].0.version;
+        b_ver.cmp(a_ver)
+    });
+
+    // Sort minor groups within each major, and patches within each minor
+    for minor_groups in &mut major_groups {
+        minor_groups.sort_by(|a, b| {
+            let a_ver = &a[0].0.version;
+            let b_ver = &b[0].0.version;
+            b_ver.cmp(a_ver)
+        });
+        for patches in minor_groups.iter_mut() {
+            patches.sort_by(|a, b| b.0.version.cmp(&a.0.version));
+        }
+    }
+
+    major_groups
+}
+
+fn maybe_rev<T>(items: Vec<T>, rev: bool) -> Vec<T> {
+    if rev {
+        items.into_iter().rev().collect()
+    } else {
+        items
+    }
+}
+
+fn tag_label(tag: &Tag, is_phantom: bool, opts: &GitOptions) -> String {
+    if is_phantom {
+        tag.version.to_string().dimmed().to_string()
+    } else {
+        tag.pretty(opts)
+    }
+}
+
+fn tree_line(
+    label: &str,
+    is_trunk_patch: bool,
+    is_trunk_minor: bool,
+    is_newest_minor: bool,
+    is_newest_major: bool,
+    is_oldest_major: bool,
+    is_newest_patch: bool,
+    rev: bool,
+) -> String {
+    let branch_start = if rev { "└── " } else { "┌── " };
+    let major_cont = if is_newest_major || is_oldest_major {
+        ""
+    } else {
+        "│   "
+    };
+
+    if is_trunk_patch && is_trunk_minor {
+        label.to_string()
+    } else if is_trunk_patch && is_newest_minor {
+        let prefix = if is_newest_major {
+            branch_start
+        } else {
+            "├── "
+        };
+        format!("{major_cont}{prefix}{label}")
+    } else if is_trunk_patch {
+        format!("{major_cont}├── {label}")
+    } else {
+        let minor_cont = if is_newest_major && is_newest_minor {
+            "    "
+        } else {
+            "│   "
+        };
+        let is_last_printed = if rev {
+            is_newest_patch && is_newest_minor
+        } else {
+            is_newest_patch
+        };
+        let prefix = if is_last_printed {
+            branch_start
+        } else {
+            "├── "
+        };
+        format!("{major_cont}{minor_cont}{prefix}{label}")
+    }
+}
+
+fn display_tags_tree(tags: &[Tag], opts: &GitOptions) {
+    let rev = opts.reverse;
+    let tags_with_phantoms = insert_phantom_trunks(tags);
+    let major_groups = build_major_groups(&tags_with_phantoms);
+    let num_majors = major_groups.len();
+    let major_items = maybe_rev(major_groups.iter().enumerate().collect(), rev);
+
+    for (maj_i, minor_groups) in major_items {
+        let is_newest_major = maj_i == 0;
+        let is_oldest_major = maj_i == num_majors - 1;
+        let num_minors = minor_groups.len();
+
+        let minor_items = maybe_rev(minor_groups.iter().enumerate().collect(), rev);
+
+        for (min_i, patches) in minor_items {
+            let is_newest_minor = min_i == 0;
+            let is_trunk_minor = min_i == num_minors - 1;
+            let num_patches = patches.len();
+
+            let patch_items = maybe_rev(patches.iter().enumerate().collect(), rev);
+
+            for (pat_i, (tag, is_phantom)) in patch_items {
+                let is_newest_patch = pat_i == 0;
+                let is_trunk_patch = pat_i == num_patches - 1;
+                let label = tag_label(tag, *is_phantom, opts);
+                let line = tree_line(
+                    &label,
+                    is_trunk_patch,
+                    is_trunk_minor,
+                    is_newest_minor,
+                    is_newest_major,
+                    is_oldest_major,
+                    is_newest_patch,
+                    rev,
+                );
+                println!("{line}")
+            }
         }
     }
 }

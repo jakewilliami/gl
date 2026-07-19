@@ -1,4 +1,4 @@
-use crate::{config, dates, opts::TagFormat};
+use crate::{config, dates, tag::TagFormat};
 use chrono::NaiveDate;
 use clap::{ArgAction, Args, Parser, Subcommand, crate_authors, crate_name, crate_version};
 
