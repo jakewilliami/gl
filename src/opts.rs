@@ -5,6 +5,7 @@ pub struct GitOptions {
     pub colour: bool,
     pub reverse: bool,
     pub log: LogOptions,
+    pub tag: TagOptions,
 }
 
 impl Default for GitOptions {
@@ -13,6 +14,7 @@ impl Default for GitOptions {
             colour: true,
             reverse: false,
             log: LogOptions::default(),
+            tag: TagOptions::default(),
         }
     }
 }
@@ -42,8 +44,14 @@ pub struct LogFilterOptions {
     pub needles: Vec<String>,
 }
 
-#[derive(Clone, ValueEnum)]
+#[derive(Clone, Default)]
+pub struct TagOptions {
+    pub fmt: TagFormat,
+}
+
+#[derive(Clone, Default, ValueEnum)]
 pub enum TagFormat {
     Short,
+    #[default]
     Long,
 }

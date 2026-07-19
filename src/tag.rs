@@ -1,6 +1,6 @@
 use crate::{
     commit::{GitCommit, git_log_iter, has_commits},
-    opts::TagFormat,
+    opts::{GitOptions, TagFormat},
     origin::remote_origin_url,
     version::{self, AsVersion, Bump, NextVersion, Version},
 };
@@ -324,9 +324,9 @@ fn open_release_urls(latest_commit: &GitCommit) {
     }
 }
 
-pub fn get_tags(fmt: TagFormat) {
+pub fn get_tags(opts: &GitOptions) {
     for tag in tags() {
-        match fmt {
+        match opts.tag.fmt {
             TagFormat::Short => println!("{tag}"),
             TagFormat::Long => match &tag.description {
                 Some(desc) => println!("{tag} - {desc}"),

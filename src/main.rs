@@ -18,7 +18,7 @@ mod version;
 
 use crate::{
     cli::{Cli, Commands},
-    opts::{GitOptions, LogFilterOptions, LogOptions},
+    opts::{GitOptions, LogFilterOptions, LogOptions, TagOptions},
 };
 use clap::Parser;
 use std::process;
@@ -28,8 +28,6 @@ fn main() {
     let opts = GitOptions {
         colour: env::colour(),
         reverse: cli.reverse,
-
-        // Log filters
         log: LogOptions {
             relative: !cli.log.absolute,
             all: cli.log.all,
@@ -37,6 +35,9 @@ fn main() {
                 authors: cli.log.authors,
                 needles: cli.log.grep,
             },
+        },
+        tag: TagOptions {
+            fmt: cli.dispatch.tags.clone().unwrap_or_default(),
         },
     };
 
@@ -85,8 +86,8 @@ fn main() {
         if let Some(current_repo) = current_repo {
             println!("{current_repo}");
         }
-    } else if let Some(fmt) = cli.dispatch.tags {
-        tag::get_tags(fmt);
+    } else if let Some(_fmt) = cli.dispatch.tags {
+        tag::get_tags(&opts);
     } else if cli.dispatch.commit_count {
         // Show commit count
         count::get_commit_count("today", &opts);
