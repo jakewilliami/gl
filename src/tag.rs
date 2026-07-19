@@ -1,10 +1,12 @@
 use crate::{
     commit::{GitCommit, git_log_iter, has_commits},
+    display::Format,
     opts::{GitOptions, TagFormat},
     origin::remote_origin_url,
     version::{self, AsVersion, Bump, NextVersion, Version},
 };
 use anyhow::{Error, anyhow};
+use colored::*;
 use dialoguer::{Confirm, Input};
 use itertools::Itertools;
 use regex::Regex;
@@ -71,6 +73,23 @@ impl Tag {
 impl fmt::Display for Tag {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.version)
+    }
+}
+
+// Pretty formatting with colours
+impl Format for Tag {
+    fn pretty(&self, opts: &GitOptions) -> String {
+        let version = self.version.to_string();
+        let version = if opts.colour {
+            version.bold().green().to_string()
+        } else {
+            version
+        };
+
+        match &self.description {
+            Some(desc) => format!("{} {} {}", version, "-", desc),
+            None => version,
+        }
     }
 }
 
@@ -327,11 +346,8 @@ fn open_release_urls(latest_commit: &GitCommit) {
 pub fn get_tags(opts: &GitOptions) {
     for tag in tags() {
         match opts.tag.fmt {
-            TagFormat::Short => println!("{tag}"),
-            TagFormat::Long => match &tag.description {
-                Some(desc) => println!("{tag} - {desc}"),
-                None => println!("{tag}"),
-            },
+            TagFormat::Short => println!("{}", tag.version),
+            TagFormat::Long => println!("{}", tag.pretty(opts)),
         }
     }
 }

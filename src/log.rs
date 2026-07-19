@@ -1,14 +1,11 @@
 use crate::{
     commit::{GitCommit, git_log},
     config,
+    display::Format,
     opts::GitOptions,
 };
 use colored::*;
 use regex::Regex;
-
-trait Format {
-    fn pretty(&self, opts: &GitOptions) -> String;
-}
 
 impl Format for GitCommit {
     fn pretty(&self, opts: &GitOptions) -> String {

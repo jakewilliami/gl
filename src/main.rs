@@ -5,6 +5,7 @@ mod config;
 mod contributions;
 mod count;
 mod dates;
+mod display;
 mod env;
 mod identity;
 mod languages;
