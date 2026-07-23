@@ -383,25 +383,43 @@ fn insert_phantom_trunks(tags: &[Tag]) -> Vec<(Tag, bool)> {
     let mut seen_major_trunks: HashSet<u64> = HashSet::new();
     let mut seen_minor_trunks: HashSet<(u64, u64)> = HashSet::new();
 
-    for tag in tags {
+    for (i, tag) in tags.iter().enumerate() {
         result.push((tag.clone(), false));
 
-        let major_trunk_version = Version::new(tag.version.major, 0, 0);
-        if tag.version != major_trunk_version
-            && !tags.iter().any(|t| t.version == major_trunk_version)
-            && !seen_major_trunks.contains(&tag.version.major)
-        {
-            result.push((Tag::with_version(&major_trunk_version), true));
-            seen_major_trunks.insert(tag.version.major);
+        // Insert phantom minor trunk after the last tag in this minor group
+        let is_last_in_minor = tags
+            .get(i + 1)
+            .map(|next| {
+                next.version.minor != tag.version.minor || next.version.major != tag.version.major
+            })
+            .unwrap_or(true);
+
+        if is_last_in_minor {
+            let minor_trunk_version = Version::new(tag.version.major, tag.version.minor, 0);
+            if tag.version != minor_trunk_version
+                && !tags.iter().any(|t| t.version == minor_trunk_version)
+                && !seen_minor_trunks.contains(&(tag.version.major, tag.version.minor))
+            {
+                result.push((Tag::with_version(&minor_trunk_version), true));
+                seen_minor_trunks.insert((tag.version.major, tag.version.minor));
+            }
         }
 
-        let minor_trunk_version = Version::new(tag.version.major, tag.version.minor, 0);
-        if tag.version != minor_trunk_version
-            && !tags.iter().any(|t| t.version == minor_trunk_version)
-            && !seen_minor_trunks.contains(&(tag.version.major, tag.version.minor))
-        {
-            result.push((Tag::with_version(&minor_trunk_version), true));
-            seen_minor_trunks.insert((tag.version.major, tag.version.minor));
+        // Insert phantom major trunk after the last tag in this major group
+        let is_last_in_major = tags
+            .get(i + 1)
+            .map(|next| next.version.major != tag.version.major)
+            .unwrap_or(true);
+
+        if is_last_in_major {
+            let major_trunk_version = Version::new(tag.version.major, 0, 0);
+            if tag.version != major_trunk_version
+                && !tags.iter().any(|t| t.version == major_trunk_version)
+                && !seen_major_trunks.contains(&tag.version.major)
+            {
+                result.push((Tag::with_version(&major_trunk_version), true));
+                seen_major_trunks.insert(tag.version.major);
+            }
         }
     }
     result
