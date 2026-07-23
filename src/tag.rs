@@ -416,6 +416,7 @@ fn insert_phantom_trunks(tags: &[Tag]) -> Vec<(Tag, bool)> {
             if tag.version != major_trunk_version
                 && !tags.iter().any(|t| t.version == major_trunk_version)
                 && !seen_major_trunks.contains(&tag.version.major)
+                && !seen_minor_trunks.contains(&(tag.version.major, 0))
             {
                 result.push((Tag::with_version(&major_trunk_version), true));
                 seen_major_trunks.insert(tag.version.major);
