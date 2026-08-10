@@ -544,7 +544,8 @@ fn tree_line(
         } else {
             "├── "
         };
-        format!("{major_cont}{minor_cont}{prefix}{label}")
+        let cont = if is_newest_minor { "" } else { major_cont };
+        format!("{cont}{minor_cont}{prefix}{label}")
     }
 }
 
